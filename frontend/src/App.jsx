@@ -43,7 +43,7 @@ export default function App() {
             {logoFailed ? (
               <span className="brand-name">Simply Med</span>
             ) : (
-              <img className="brand-logo" src="/logo.png" alt="SimplyMed" onError={() => setLogoFailed(true)} />
+              <img className="brand-logo" src={`${import.meta.env.BASE_URL}logo.png`} alt="SimplyMed" onError={() => setLogoFailed(true)} />
             )}
           </a>
           <nav className="site-nav" aria-label="Main">

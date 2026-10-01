@@ -97,13 +97,35 @@ Add more cases. Aim for 20+, including tricky ones (liquid mL vs mg doses, taper
 
 ## Deploy (free) for physician testing
 
-The backend can serve the built website, so one free **Render** web service is enough:
+GitHub Pages can only host static files, so the site is split in two:
 
-- **Build command:** `cd frontend && npm install && npm run build && cd ../backend && pip install -r requirements.txt`
-- **Start command:** `cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"`
-- **Environment variables:** `AI_PROVIDER`, the API key, and `ALLOWED_ORIGINS` set to your Render URL
+- **Website** (React) on **GitHub Pages**: `https://<your-username>.github.io/simplymed/`
+- **Backend** (Python + your AI key) on **Render**, free plan
 
-Free Render services sleep when idle, so the first visit can take about 30 seconds.
+**1. Backend on Render** (do this first; you need its address for step 2)
+
+1. Sign in at https://render.com with GitHub.
+2. **New -> Blueprint**, pick this repo. Render reads `render.yaml`.
+3. When asked, fill in `GEMINI_API_KEY` and set `ALLOWED_ORIGINS` to your Pages address with
+   no path and no trailing slash, e.g. `https://prayagpatel-24.github.io`.
+   (Using Groq instead? Change `AI_PROVIDER` to `groq` and add `GROQ_API_KEY` under Environment.)
+4. When it's live, open `https://<your-service>.onrender.com/api/health`. It should show your provider.
+
+**2. Website on GitHub Pages**
+
+1. On GitHub: **Settings -> Pages -> Build and deployment -> Source: GitHub Actions**.
+2. **Settings -> Secrets and variables -> Actions -> Variables tab -> New repository variable**:
+   name `VITE_API_URL`, value your Render address, e.g. `https://simplymed-api.onrender.com`.
+   (This is a variable, not a secret: the address is public. The AI key stays on Render only.)
+3. Push to `main`, or run **Actions -> Deploy website to GitHub Pages -> Run workflow**.
+   `.github/workflows/deploy-pages.yml` builds `frontend/` and publishes it.
+
+Free Render services sleep after about 15 minutes idle, so the first request can take about a
+minute. The app tells the user to wait and try again.
+
+**Alternative (one service):** Render alone can serve both. Use a plain Web Service with build
+command `cd frontend && npm install && npm run build && cd ../backend && pip install -r requirements.txt`
+and the start command from `render.yaml` (run from `backend`). Then `VITE_API_URL` is not needed.
 
 ## Project layout
 
@@ -118,6 +140,8 @@ backend/
   app/providers.py     Gemini, Groq, demo mode
   eval/                test cases and evaluation runner
   tests/               unit tests
+render.yaml            Render setup for the backend
+.github/workflows/     GitHub Pages deploy for the website
 frontend/
   src/components/      input page, care plan, medicine cards, reminders, ...
   src/ics.js           calendar file builder
@@ -130,7 +154,7 @@ frontend/
 - [ ] Connect a free AI key and run the evaluation
 - [ ] Grow `eval/cases.json` to 20+ cases
 - [ ] Feedback page or Google Form for testers (comprehension questions + ratings)
-- [ ] Deploy to Render and share with physician testers
+- [ ] Deploy (GitHub Pages + Render) and share with physician testers
 - [ ] Live calendar sync (Google Calendar API) once users can sign in; the `.ics` download covers the demo
 - [ ] Missed-dose helper (only restating what the label says)
 - [ ] "Family Echo" caregiver view (needs accounts, so version 2)

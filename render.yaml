@@ -1,0 +1,21 @@
+# Render "Blueprint" for the SimplyMed backend (free plan).
+# Render dashboard -> New -> Blueprint -> pick this repo. It asks for the values marked sync: false.
+services:
+  - type: web
+    name: simplymed-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: AI_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
+        sync: false
+      # Your GitHub Pages address, no path and no trailing slash, e.g. https://prayagpatel-24.github.io
+      - key: ALLOWED_ORIGINS
+        sync: false
