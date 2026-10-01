@@ -150,7 +150,7 @@ export default function ReminderBuilder({ medications, followUps }) {
                 />
               </label>
               {!meds[i].daysFromInstructions && (
-                <p className="hint">Your instructions do not say for how long. Check with your pharmacist.</p>
+                <p className="hint">Ask your pharmacist how many days to take it.</p>
               )}
             </>
           )}

@@ -38,7 +38,7 @@ export default function MedicationCard({ med, children }) {
 
       <p className="missed-dose">
         <strong>If you miss a dose: </strong>
-        {med.missed_dose || 'Your instructions do not say. Ask your pharmacist.'}
+        {med.missed_dose || 'Ask your pharmacist.'}
       </p>
 
       <Original text={med.original_text} />

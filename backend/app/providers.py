@@ -4,6 +4,7 @@ To add a paid provider later (Claude, OpenAI, ...), add a class with the same
 `complete_json(system, user) -> str` method and register it in get_provider().
 """
 
+import asyncio
 import logging
 
 import httpx
@@ -40,12 +41,7 @@ class GeminiProvider(BaseProvider):
             "contents": [{"role": "user", "parts": [{"text": user}]}],
             "generationConfig": {"temperature": 0.1, "responseMimeType": "application/json"},
         }
-        async with httpx.AsyncClient(timeout=90) as client:
-            r = await client.post(
-                self.URL.format(model=self.model),
-                headers={"x-goog-api-key": self.api_key},
-                json=body,
-            )
+        r = await _post(self.URL.format(model=self.model), {"x-goog-api-key": self.api_key}, body)
         _raise_for_status(r, "Gemini")
         try:
             return r.json()["candidates"][0]["content"]["parts"][0]["text"]
@@ -71,10 +67,7 @@ class GroqProvider(BaseProvider):
                 {"role": "user", "content": user},
             ],
         }
-        async with httpx.AsyncClient(timeout=90) as client:
-            r = await client.post(
-                self.URL, headers={"Authorization": f"Bearer {self.api_key}"}, json=body
-            )
+        r = await _post(self.URL, {"Authorization": f"Bearer {self.api_key}"}, body)
         _raise_for_status(r, "Groq")
         try:
             return r.json()["choices"][0]["message"]["content"]
@@ -92,12 +85,36 @@ class MockProvider(BaseProvider):
         return build_mock_response(user)
 
 
+# "Busy right now" answers from free tiers. Worth a couple of quick retries.
+_BUSY = (500, 502, 503, 504)
+_RETRY_DELAYS = (2, 5)
+
+
+async def _post(url: str, headers: dict, body: dict) -> httpx.Response:
+    async with httpx.AsyncClient(timeout=90) as client:
+        for delay in (*_RETRY_DELAYS, None):
+            r = await client.post(url, headers=headers, json=body)
+            if r.status_code not in _BUSY or delay is None:
+                return r
+            log.warning("AI busy (%s), retrying in %ss", r.status_code, delay)
+            await asyncio.sleep(delay)
+
+
 def _raise_for_status(r: httpx.Response, label: str) -> None:
     if r.status_code == 429:
         raise ProviderError("The free AI limit was reached. Please wait a minute and try again.")
     if r.status_code in (401, 403):
         log.error("%s error %s: %s", label, r.status_code, r.text[:500])
-        raise ProviderError(f"The {label} API key was refused ({r.status_code}). Check the key in backend/.env.")
+        raise ProviderError(
+            f"The {label} API key was refused ({r.status_code}). Check the key "
+            "(backend/.env on your computer, or Environment settings on Render)."
+        )
+    if r.status_code in _BUSY:
+        log.error("%s error %s: %s", label, r.status_code, r.text[:500])
+        raise ProviderError(
+            f"The {label} AI is busy or unavailable right now ({r.status_code}). Please try again in a "
+            "minute. If this keeps happening, switch to a different model (GEMINI_MODEL / GROQ_MODEL)."
+        )
     if r.status_code >= 400:
         # Log the status and the provider's error only; never the patient text.
         log.error("%s error %s: %s", label, r.status_code, r.text[:500])
