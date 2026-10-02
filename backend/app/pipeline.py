@@ -6,7 +6,7 @@ import re
 from pydantic import ValidationError
 
 from . import readability
-from .pii import scrub
+from .pii import age_label, scrub
 from .prompt import build_system_prompt, build_user_message
 from .providers import BaseProvider
 from .safety import check_plan
@@ -28,9 +28,10 @@ def parse_plan(raw: str) -> CarePlan:
         raise PlanParseError(str(e)[:500]) from e
 
 
-async def simplify(text: str, language: str, reading_level: str, provider: BaseProvider) -> dict:
+async def simplify(text: str, language: str, provider: BaseProvider, age: int | None = None) -> dict:
     scrubbed, removed = scrub(text)
-    system = build_system_prompt(language, reading_level)
+    age_text = age_label(age)
+    system = build_system_prompt(language, age_text)
     user = build_user_message(scrubbed)
 
     raw = await provider.complete_json(system, user)
@@ -48,6 +49,7 @@ async def simplify(text: str, language: str, reading_level: str, provider: BaseP
         "safety": check_plan(scrubbed, plan, language),
         "readability": readability.compare(scrubbed, plan, language),
         "language": language,
+        "age": age_text,
         "provider": provider.name,
         "model": provider.model,
     }

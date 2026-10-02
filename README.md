@@ -11,28 +11,41 @@ always one click away.
 
 ```
 Browser (React)  ->  FastAPI backend  ->  AI model (Gemini / Groq, free tiers)
-                        |
-                        |-- 1. removes names, birth dates, phone numbers, record numbers
-                        |-- 2. asks the AI for a structured care plan (JSON)
-                        |-- 3. rule-based safety check: every number, dose, unit,
-                        |      frequency and warning in the original must still be there
-                        '-- 4. before/after reading-level scores
+       |                |
+       |                |-- 1. removes names, birth dates, phone numbers, record numbers;
+       |                |      ages 90+ are sent as "90 or older"
+       |                |-- 2. asks the AI for a structured care plan (JSON, bullet points)
+       |                |-- 3. rule-based safety check: every number, dose, unit,
+       |                |      frequency and warning in the original must still be there
+       |                '-- 4. before/after reading-level scores
+       |
+       '--> Supabase (optional): sign-in, saved medicines, calendar, age, text size, feedback
 ```
 
-The server never saves or logs what the user types, and the AI provider is only sent the
-de-identified text. **My Medicines** and **Calendar** are kept only in that browser tab
-(sessionStorage): they survive a refresh and are deleted when the tab is closed. Text size and
-default options are remembered in the browser (localStorage). Calendar reminders can also be
-downloaded as an `.ics` file, so no Google login is needed.
+**Privacy.** The server never saves or logs what the user types, and the AI is only sent the
+de-identified text. Signed-in users' medicines, calendar, age and text size are saved in
+Supabase, protected by Row Level Security so each person only sees their own. Without an
+account, they are kept only in that browser tab and deleted when it closes. The full pasted
+text is never saved on a server; a saved medicine keeps only its own original-words excerpt
+so the original stays one click away.
+
+**Age.** An optional age (never a birth date) is used only to speak to a caregiver when the
+patient is under 18, and to add age-specific *questions to ask* the pharmacist. The AI does
+not add age-specific doses, side effects or risks that are not in the original, because the
+safety check cannot verify them.
 
 ## Pages
 
-- **Simplify**: paste instructions, get *My Care Plan*, then choose **Save to My Medicines and
-  Calendar** after checking the suggested reminder times.
-- **My Medicines**: saved medicines. Edit, remove, or add by hand. The original words never change.
-- **Calendar**: a day-by-day list of dose reminders and appointments. Add, edit, remove, or
-  download everything for Google / Apple / Outlook Calendar.
-- **Settings**: text size, default language and reading level, delete saved data.
+- **Simplify**: paste instructions and an optional age, get *My Care Plan*, then choose
+  **Save to My Medicines and Calendar** after checking the suggested reminder times.
+- **My Medicines**: a table of saved medicines. Edit, remove, show the original words, or add by hand.
+- **Calendar**: Month view (tap a day to add, edit or remove) and Week view. Download everything
+  as an `.ics` file for Google / Apple / Outlook Calendar.
+- **Help**: step-by-step guides, fixes for common errors, and the **SimplyMed helper** chatbot
+  (explains the app and words in your care plan; never gives medical advice).
+- **Feedback**: ease-of-use rating, "did it make sense?", comments. Saved to Supabase.
+- **Settings**: text size (enlarges the words, not the layout), language, delete saved data.
+- **Account**: sign up, sign in, reset password, or continue without an account.
 
 ## Run it on your computer (Windows / VS Code)
 
@@ -54,107 +67,109 @@ uvicorn app.main:app --reload
 ```powershell
 cd frontend
 npm install
+copy .env.example .env      # optional: add Supabase values to test accounts
 npm run dev
 ```
 
-Open http://localhost:5173. It starts in **demo mode**: no AI is connected, and the
-"Hospital discharge" example shows a hand-written answer so you can work on the design.
+Open http://localhost:5173. Without an AI key it runs in **demo mode**: the "Hospital
+discharge" example shows a hand-written answer. Without Supabase values it runs in
+**guest mode**: no accounts, and nothing is kept after the tab closes.
 
 ## Connect a free AI model
 
 1. Get a free key from **Google AI Studio** (https://aistudio.google.com/apikey) or
    **Groq** (https://console.groq.com/keys).
-2. In `backend/.env` (not `.env.example`, which gets committed), set `AI_PROVIDER=gemini`
+2. In `backend/.env` (never `.env.example`, which is committed), set `AI_PROVIDER=gemini`
    (or `groq`) and paste the key.
 3. Restart the backend.
 
 Model names change often. If you get a "model not found" error, check the provider's
-list of free models and update `GEMINI_MODEL` / `GROQ_MODEL`.
+list of free models and update `GEMINI_MODEL` / `GROQ_MODEL`. If you keep getting "AI is
+busy" (503), try a different model.
 
 **Privacy:** free tiers may let the provider review or keep what you send. That is fine
 for made-up examples and another reason never to use real patient data. Tell physician
 testers this too.
 
 **Paid model later:** add a class to `backend/app/providers.py` with the same
-`complete_json` method and register it in `get_provider()`. Nothing else changes.
+`complete_json` and `complete_text` methods and register it in `get_provider()`.
+
+## Set up accounts (Supabase, free)
+
+1. Create a project at https://supabase.com.
+2. **SQL Editor -> New query**, paste all of `supabase/schema.sql`, and press **Run**.
+3. **Project Settings -> API**: copy the **Project URL** and the **anon public** key into
+   `frontend/.env` as `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (and into Vercel, below).
+4. **Authentication -> URL Configuration**: set **Site URL** to your Vercel address (and add
+   `http://localhost:5173` under Redirect URLs) so the email links come back to SimplyMed.
+5. Optional for testing: **Authentication -> Providers -> Email**, turn off **Confirm email**
+   so testers can sign in right away.
+
+Feedback appears in **Table Editor -> feedback**, where you can export it to CSV.
+Free projects pause after about a week without use; open the dashboard and resume it.
+
+## Deploy (free) on Vercel
+
+The website and the Python API run together on Vercel, so there is one address and no
+separate server. The AI key stays in Vercel's settings, never in the website or GitHub.
+
+1. Sign in at https://vercel.com with GitHub and **Add New -> Project**, then import this repo.
+   Leave the settings as they are; `vercel.json` sets the build and the `/api` function.
+2. Before deploying, open **Environment Variables** and add:
+   - `AI_PROVIDER` = `gemini` (or `groq`), plus `GEMINI_API_KEY` and `GEMINI_MODEL`
+     (or `GROQ_API_KEY`)
+   - `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+3. **Deploy.** Every push to `main` redeploys. Check `https://<your-app>.vercel.app/api/health`.
+4. If you used GitHub Pages before: GitHub repo **Settings -> Pages**, set Source to **None**.
 
 ## Tests and evaluation
 
 ```powershell
 cd backend
-pytest                              # safety-check and privacy unit tests
+pytest                              # safety check, privacy, age and chat tests
 python -m eval.run_eval             # runs all cases in eval/cases.json through the AI
 python -m eval.run_eval --only warfarin
 ```
 
 `eval/cases.json` holds made-up test cases, each listing details that **must** appear
-in the output and things that must **not** (invented brand names, doubled doses, and
-so on). Every run is saved to `eval/results/`. Rerun it whenever you change
-`app/prompt.py` and compare. These tables can go straight into the research paper.
+in the output, things that must **not** appear anywhere, and (for age cases) things that
+must not be **stated** as fact outside the questions. Every run is saved to `eval/results/`.
+Rerun it whenever you change `app/prompt.py` and compare. These tables can go straight into
+the research paper.
 
 Add more cases. Aim for 20+, including tricky ones (liquid mL vs mg doses, tapers,
-"every 4-6 hours", conflicting instructions).
-
-## Deploy (free) for physician testing
-
-GitHub Pages can only host static files, so the site is split in two:
-
-- **Website** (React) on **GitHub Pages**: `https://<your-username>.github.io/simplymed/`
-- **Backend** (Python + your AI key) on **Render**, free plan
-
-**1. Backend on Render** (do this first; you need its address for step 2)
-
-1. Sign in at https://render.com with GitHub.
-2. **New -> Blueprint**, pick this repo. Render reads `render.yaml`.
-3. When asked, fill in `GEMINI_API_KEY` and set `ALLOWED_ORIGINS` to your Pages address with
-   no path and no trailing slash, e.g. `https://prayagpatel-24.github.io`.
-   (Using Groq instead? Change `AI_PROVIDER` to `groq` and add `GROQ_API_KEY` under Environment.)
-4. When it's live, open `https://<your-service>.onrender.com/api/health`. It should show your provider.
-
-**2. Website on GitHub Pages**
-
-1. On GitHub: **Settings -> Pages -> Build and deployment -> Source: GitHub Actions**.
-2. **Settings -> Secrets and variables -> Actions -> Variables tab -> New repository variable**:
-   name `VITE_API_URL`, value your Render address, e.g. `https://simplymed-api.onrender.com`.
-   (This is a variable, not a secret: the address is public. The AI key stays on Render only.)
-3. Push to `main`, or run **Actions -> Deploy website to GitHub Pages -> Run workflow**.
-   `.github/workflows/deploy-pages.yml` builds `frontend/` and publishes it.
-
-Free Render services sleep after about 15 minutes idle, so the first request can take about a
-minute. The app tells the user to wait and try again.
-
-**Alternative (one service):** Render alone can serve both. Use a plain Web Service with build
-command `cd frontend && npm install && npm run build && cd ../backend && pip install -r requirements.txt`
-and the start command from `render.yaml` (run from `backend`). Then `VITE_API_URL` is not needed.
+"every 4-6 hours", conflicting instructions, children and adults 75+).
 
 ## Project layout
 
 ```
+api/index.py           Vercel entry point for the backend
+vercel.json            Vercel build + routing
+supabase/schema.sql    database tables and privacy rules (paste into Supabase)
 backend/
-  app/main.py          API routes, rate limit, serves the built site
+  app/main.py          API routes (/api/simplify, /api/chat), rate limit
   app/prompt.py        AI instructions (where most tuning happens)
+  app/chat.py          Help page chatbot instructions and guardrails
   app/schemas.py       the structured care plan the AI must return
   app/safety.py        rule-based check that no critical detail was lost
-  app/pii.py           removes personal details before the AI sees the text
+  app/pii.py           removes personal details; groups ages 90+
   app/readability.py   Flesch-Kincaid before/after scores
   app/providers.py     Gemini, Groq, demo mode
   eval/                test cases and evaluation runner
   tests/               unit tests
-render.yaml            Render setup for the backend
-.github/workflows/     GitHub Pages deploy for the website
 frontend/
-  src/components/      input page, care plan, medicine cards, reminders, ...
+  src/components/      pages, care plan, medicines table, calendar, help, ...
+  src/store.jsx        saved medicines/calendar/profile (Supabase or this tab)
+  src/auth.jsx         sign in / sign up / password reset
   src/ics.js           calendar file builder
-  src/styles.css       sage green, cream and antique gold theme matched to the logo
+  src/styles.css       brighter sage and gold theme with a color per tab
 ```
 
 ## Next steps
 
-- [ ] Save the logo (cropped to just the cream rectangle) as `frontend/public/logo.png`
-- [ ] Connect a free AI key and run the evaluation
+- [ ] Connect a working AI key and run the evaluation (compare models)
+- [ ] Create the Supabase project and deploy to Vercel
 - [ ] Grow `eval/cases.json` to 20+ cases
-- [ ] Feedback page or Google Form for testers (comprehension questions + ratings)
-- [ ] Deploy (GitHub Pages + Render) and share with physician testers
-- [ ] Live calendar sync (Google Calendar API) once users can sign in; the `.ics` download covers the demo
-- [ ] Missed-dose helper (only restating what the label says)
-- [ ] "Family Echo" caregiver view (needs accounts, so version 2)
+- [ ] Share with physician testers; review feedback in Supabase
+- [ ] Live calendar sync (Google Calendar API); the `.ics` download covers the demo
+- [ ] "Family Echo" caregiver view (accounts now exist, so this is possible)

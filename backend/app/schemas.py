@@ -53,7 +53,7 @@ class FollowUp(BaseModel):
 
 
 class CarePlan(BaseModel):
-    summary: str
+    summary: list[str] = Field(default_factory=list)
     medications: list[Medication] = Field(default_factory=list)
     steps: list[Step] = Field(default_factory=list)
     warning_signs: list[WarningSign] = Field(default_factory=list)
@@ -67,7 +67,10 @@ class CarePlan(BaseModel):
     def _nulls_to_empty_lists(cls, data):
         # Models sometimes send null instead of [] for empty sections.
         if isinstance(data, dict):
-            for key in ("medications", "steps", "warning_signs", "follow_ups",
+            # The summary is bullet points; older answers sent one string.
+            if isinstance(data.get("summary"), str):
+                data["summary"] = [data["summary"]]
+            for key in ("summary", "medications", "steps", "warning_signs", "follow_ups",
                         "checklist", "questions_to_ask", "unclear_items"):
                 if data.get(key) is None:
                     data[key] = []

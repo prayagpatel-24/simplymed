@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import MedicationCard from './MedicationCard.jsx'
+import { Fragment, useState } from 'react'
 import Original from './Original.jsx'
+import PageHeader from './PageHeader.jsx'
 import { emptyMedicine, useCareStore } from '../store.jsx'
 import { href } from '../useRoute.js'
 
@@ -14,73 +14,157 @@ const TEXT_FIELDS = [
   ['purpose', "What it's for"],
 ]
 
+// Table columns. On phones each row turns into a stacked card using these labels.
+const COLUMNS = [
+  ['How much', (m) => [m.dose, m.strength].filter(Boolean).join(', ')],
+  ['How often', (m) => m.frequency],
+  ['For how long', (m) => m.duration],
+  ["What it's for", (m) => m.purpose],
+]
+
 export default function MedicinesPage() {
-  const { medicines, addMedicine, updateMedicine, removeMedicine } = useCareStore()
+  const { medicines, loading, addMedicine, updateMedicine, removeMedicine } = useCareStore()
   const [editingId, setEditingId] = useState(null)
   const [adding, setAdding] = useState(false)
+  const [openOriginal, setOpenOriginal] = useState(null)
+  const editing = medicines.find((m) => m.id === editingId)
 
   function handleRemove(med) {
     if (window.confirm(`Remove ${med.name} and its calendar reminders?`)) removeMedicine(med.id)
   }
 
+  function startEdit(id) {
+    setAdding(false)
+    setEditingId(id)
+    window.scrollTo({ top: 0 })
+  }
+
   return (
     <div className="page">
-      <header className="page-header">
-        <h1>My Medicines</h1>
-        <p className="lead">
-          Medicines you saved from your care plans. You can change them if your pharmacist or doctor
-          tells you something different. The original words stay here so you can always compare.
-        </p>
-      </header>
+      <PageHeader path="/medicines" />
 
-      {medicines.length === 0 && !adding && (
-        <div className="card empty">
-          <p>
-            <strong>No medicines yet.</strong> <a href={href('/')}>Simplify some instructions</a>, then
-            choose <strong>Save to My Medicines and Calendar</strong>. You can also add one by hand.
-          </p>
+      {(editing || adding) && (
+        <MedicineForm
+          key={editing?.id ?? 'new'}
+          initial={editing ?? emptyMedicine()}
+          title={editing ? `Change ${editing.name}` : 'Add a medicine'}
+          isNew={!editing}
+          onSave={(med) => {
+            if (editing) updateMedicine(editing.id, med)
+            else addMedicine(med)
+            setEditingId(null)
+            setAdding(false)
+          }}
+          onCancel={() => {
+            setEditingId(null)
+            setAdding(false)
+          }}
+        />
+      )}
+
+      {loading ? (
+        <p className="card" role="status">Loading your medicines...</p>
+      ) : medicines.length === 0 ? (
+        !adding && (
+          <div className="card empty">
+            <p>
+              <strong>No medicines yet.</strong> <a href={href('/')}>Simplify some instructions</a>, then
+              choose <strong>Save to My Medicines and Calendar</strong>. You can also add one by hand.
+            </p>
+          </div>
+        )
+      ) : (
+        <div className="card table-card">
+          <table className="med-table">
+            <caption>
+              {medicines.length} {medicines.length === 1 ? 'medicine' : 'medicines'}
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Medicine</th>
+                {COLUMNS.map(([label]) => (
+                  <th key={label} scope="col">{label}</th>
+                ))}
+                <th scope="col">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {medicines.map((med) => (
+                <Fragment key={med.id}>
+                  <tr>
+                    <th scope="row" data-label="Medicine">
+                      <span className="med-name">{med.name}</span>
+                      {med.as_needed && <span className="badge">Only when needed</span>}
+                      {med.edited && <span className="badge badge-plain">Edited by you</span>}
+                      <div className="row-actions">
+                        {med.original_text && (
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-small"
+                            aria-expanded={openOriginal === med.id}
+                            onClick={() => setOpenOriginal(openOriginal === med.id ? null : med.id)}
+                          >
+                            {openOriginal === med.id ? 'Hide original words' : 'Show original words'}
+                          </button>
+                        )}
+                        <button type="button" className="btn btn-ghost btn-small" onClick={() => startEdit(med.id)}>
+                          Edit <span className="visually-hidden">{med.name}</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-small btn-danger-outline"
+                          onClick={() => handleRemove(med)}
+                        >
+                          Remove <span className="visually-hidden">{med.name}</span>
+                        </button>
+                      </div>
+                    </th>
+                    {COLUMNS.map(([label, value]) => (
+                      <td key={label} data-label={label}>
+                        {value(med) || <span className="muted">Not stated</span>}
+                      </td>
+                    ))}
+                    <td data-label="Notes">
+                      {med.special_instructions?.length > 0 ? (
+                        <ul className="cell-list">
+                          {med.special_instructions.map((s, i) => (
+                            <li key={i}>{s}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <span className="muted">None</span>
+                      )}
+                      <p className="cell-missed">
+                        <strong>If you miss a dose:</strong> {med.missed_dose || 'Ask your pharmacist.'}
+                      </p>
+                    </td>
+                  </tr>
+                  {openOriginal === med.id && (
+                    <tr className="original-row">
+                      <td colSpan={COLUMNS.length + 2}>
+                        <p className="field-label">Original words for {med.name}</p>
+                        <blockquote className="original-quote">{med.original_text}</blockquote>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {medicines.map((med) =>
-        editingId === med.id ? (
-          <MedicineForm
-            key={med.id}
-            initial={med}
-            title={`Change ${med.name}`}
-            onSave={(patch) => {
-              updateMedicine(med.id, patch)
-              setEditingId(null)
-            }}
-            onCancel={() => setEditingId(null)}
-          />
-        ) : (
-          <MedicationCard key={med.id} med={med}>
-            <button type="button" className="btn btn-ghost" onClick={() => setEditingId(med.id)}>
-              Edit {med.name}
+      {!adding && !editing && (
+        <div className="button-row">
+          <button type="button" className="btn btn-primary" onClick={() => setAdding(true)}>
+            Add a medicine by hand
+          </button>
+          {medicines.length > 0 && (
+            <button type="button" className="btn btn-ghost" onClick={() => window.print()}>
+              Print my medicines
             </button>
-            <button type="button" className="btn btn-ghost btn-danger-outline" onClick={() => handleRemove(med)}>
-              Remove {med.name}
-            </button>
-          </MedicationCard>
-        ),
-      )}
-
-      {adding ? (
-        <MedicineForm
-          initial={emptyMedicine()}
-          title="Add a medicine"
-          isNew
-          onSave={(med) => {
-            addMedicine(med)
-            setAdding(false)
-          }}
-          onCancel={() => setAdding(false)}
-        />
-      ) : (
-        <button type="button" className="btn btn-primary" onClick={() => setAdding(true)}>
-          Add a medicine by hand
-        </button>
+          )}
+        </div>
       )}
     </div>
   )

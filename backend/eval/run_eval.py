@@ -34,7 +34,7 @@ async def run(delay: float, only: str | None) -> None:
         if i:
             await asyncio.sleep(delay)
         try:
-            result = await simplify(case["text"], "en", "very_simple", provider)
+            result = await simplify(case["text"], "en", provider, age=case.get("age"))
         except (ProviderError, PlanParseError) as e:
             rows.append((case["id"], "ERROR", "-", "-", "-", str(e)[:60]))
             print(f"  {case['id']}: ERROR {e}")
@@ -44,6 +44,8 @@ async def run(delay: float, only: str | None) -> None:
         full = json.dumps(result["plan"]).lower()
         missing = [s for s in case["must_include"] if normalize(s) not in text]
         forbidden = [s for s in case["must_not_include"] if s.lower() in full]
+        # must_not_state: may appear as a question to ask, but never stated as a fact.
+        forbidden += [s for s in case.get("must_not_state", []) if normalize(s) in text]
         safety = result["safety"]
         read = result["readability"]
         grade = f'{read["original"]["grade"]} -> {read["simplified"]["grade"]}'

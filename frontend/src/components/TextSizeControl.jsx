@@ -2,6 +2,7 @@ const SIZES = [
   { scale: 1, label: 'Normal' },
   { scale: 1.2, label: 'Large' },
   { scale: 1.4, label: 'Extra large' },
+  { scale: 1.6, label: 'Largest' },
 ]
 
 export default function TextSizeControl({ value, onChange }) {

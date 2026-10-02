@@ -5,7 +5,11 @@ import re
 
 # A hand-written plan for the pneumonia example in frontend/src/samples.js.
 DEMO_PLAN = {
-    "summary": "You were treated for pneumonia, a lung infection. These steps help you get better at home.",
+    "summary": [
+        "You were treated for pneumonia.",
+        "Pneumonia is a lung infection.",
+        "These steps help you get better at home.",
+    ],
     "medications": [
         {
             "name": "Amoxicillin-clavulanate",
@@ -99,8 +103,11 @@ def build_mock_response(user_message: str) -> str:
 
     sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+|\n+", original) if s.strip()]
     return json.dumps({
-        "summary": "Demo mode: no AI is connected, so this just splits the original into steps. "
-                   "Add an API key in backend/.env to get a real plain-language version.",
+        "summary": [
+            "Demo mode: no AI is connected.",
+            "This just splits the original into steps.",
+            "Add an API key in backend/.env to get a real plain-language version.",
+        ],
         "steps": [{"text": s, "original_text": s} for s in sentences[:20]],
         "questions_to_ask": ["What is the most important thing for me to do?"],
     })

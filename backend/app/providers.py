@@ -1,7 +1,8 @@
 """AI providers. Switch between them with AI_PROVIDER in backend/.env.
 
 To add a paid provider later (Claude, OpenAI, ...), add a class with the same
-`complete_json(system, user) -> str` method and register it in get_provider().
+`complete_json(system, user) -> str` and `complete_text(system, messages) -> str`
+methods and register it in get_provider().
 """
 
 import asyncio
@@ -26,6 +27,10 @@ class BaseProvider:
     async def complete_json(self, system: str, user: str) -> str:
         raise NotImplementedError
 
+    async def complete_text(self, system: str, messages: list[dict]) -> str:
+        """A plain-text chat reply. messages: [{"role": "user" | "assistant", "content": str}]"""
+        raise NotImplementedError
+
 
 class GeminiProvider(BaseProvider):
     name = "gemini"
@@ -41,6 +46,20 @@ class GeminiProvider(BaseProvider):
             "contents": [{"role": "user", "parts": [{"text": user}]}],
             "generationConfig": {"temperature": 0.1, "responseMimeType": "application/json"},
         }
+        return await self._generate(body)
+
+    async def complete_text(self, system: str, messages: list[dict]) -> str:
+        body = {
+            "systemInstruction": {"parts": [{"text": system}]},
+            "contents": [
+                {"role": "model" if m["role"] == "assistant" else "user", "parts": [{"text": m["content"]}]}
+                for m in messages
+            ],
+            "generationConfig": {"temperature": 0.2},
+        }
+        return await self._generate(body)
+
+    async def _generate(self, body: dict) -> str:
         r = await _post(self.URL.format(model=self.model), {"x-goog-api-key": self.api_key}, body)
         _raise_for_status(r, "Gemini")
         try:
@@ -67,6 +86,17 @@ class GroqProvider(BaseProvider):
                 {"role": "user", "content": user},
             ],
         }
+        return await self._chat(body)
+
+    async def complete_text(self, system: str, messages: list[dict]) -> str:
+        body = {
+            "model": self.model,
+            "temperature": 0.2,
+            "messages": [{"role": "system", "content": system}, *messages],
+        }
+        return await self._chat(body)
+
+    async def _chat(self, body: dict) -> str:
         r = await _post(self.URL, {"Authorization": f"Bearer {self.api_key}"}, body)
         _raise_for_status(r, "Groq")
         try:
@@ -83,6 +113,13 @@ class MockProvider(BaseProvider):
 
     async def complete_json(self, system: str, user: str) -> str:
         return build_mock_response(user)
+
+    async def complete_text(self, system: str, messages: list[dict]) -> str:
+        return (
+            "- Demo mode: no AI is connected, so I can't answer questions yet.\n"
+            "- Look through the How to... sections on this page.\n"
+            "- For questions about your medicines, ask your pharmacist or doctor."
+        )
 
 
 # "Busy right now" answers from free tiers. Worth a couple of quick retries.
@@ -124,10 +161,10 @@ def _raise_for_status(r: httpx.Response, label: str) -> None:
 def get_provider() -> BaseProvider:
     if config.AI_PROVIDER == "gemini":
         if not config.GEMINI_API_KEY:
-            raise ProviderError("GEMINI_API_KEY is missing from backend/.env.")
+            raise ProviderError("GEMINI_API_KEY is not set (backend/.env, or the hosting environment settings).")
         return GeminiProvider(config.GEMINI_API_KEY, config.GEMINI_MODEL)
     if config.AI_PROVIDER == "groq":
         if not config.GROQ_API_KEY:
-            raise ProviderError("GROQ_API_KEY is missing from backend/.env.")
+            raise ProviderError("GROQ_API_KEY is not set (backend/.env, or the hosting environment settings).")
         return GroqProvider(config.GROQ_API_KEY, config.GROQ_MODEL)
     return MockProvider()

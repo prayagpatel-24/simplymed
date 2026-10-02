@@ -55,3 +55,29 @@ export function formatTime(time) {
   if (!time) return 'Any time'
   return toLocalDate('2000-01-01', time).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
 }
+
+export function startOfMonth(key) {
+  return `${key.slice(0, 7)}-01`
+}
+
+export function addMonths(key, n) {
+  const d = toLocalDate(startOfMonth(key))
+  d.setMonth(d.getMonth() + n)
+  return dateKey(d)
+}
+
+/** Weeks (Monday first) covering the month of `key`: an array of 7-day arrays of date keys. */
+export function monthGrid(key) {
+  const first = startOfMonth(key)
+  const last = addDays(addMonths(first, 1), -1)
+  const weeks = []
+  for (let day = startOfWeek(first); day <= last; day = addDays(day, 7)) {
+    weeks.push(Array.from({ length: 7 }, (_, i) => addDays(day, i)))
+  }
+  return weeks
+}
+
+export const monthLabel = (key) =>
+  toLocalDate(key).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+
+export const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']

@@ -29,7 +29,7 @@ def _sentence(s: str | None) -> str:
 
 
 def readable_text(plan: CarePlan) -> str:
-    parts = [plan.summary]
+    parts = [*plan.summary]
     for m in plan.medications:
         line = " ".join(p for p in [m.name, m.strength, m.dose, m.route, m.frequency, m.duration] if p)
         parts += [line, m.purpose, *m.special_instructions, m.missed_dose]

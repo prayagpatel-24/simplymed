@@ -131,7 +131,7 @@ def plan_text(plan: CarePlan) -> str:
     """Everything the patient reads as instructions. original_text is left out on
     purpose (copying the original must not count as keeping a detail), and so are
     questions_to_ask / unclear_items (a number only in a question isn't kept)."""
-    parts = [plan.summary]
+    parts = [*plan.summary]
     for m in plan.medications:
         parts += [m.name, m.strength, m.dose, m.route, m.frequency, m.duration,
                   m.purpose, m.missed_dose, *m.special_instructions]

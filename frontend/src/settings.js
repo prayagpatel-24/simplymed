@@ -1,6 +1,6 @@
 // Display and simplify preferences, remembered on this device (not health information).
 export const DEFAULTS_KEY = 'simplymed-defaults'
-export const DEFAULT_OPTIONS = { language: 'en', readingLevel: 'very_simple' }
+export const DEFAULT_OPTIONS = { language: 'en' }
 
 export const LANGUAGES = [
   ['en', 'English'],

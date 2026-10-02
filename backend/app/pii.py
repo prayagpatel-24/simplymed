@@ -18,6 +18,13 @@ PATTERNS: list[tuple[str, re.Pattern, str]] = [
 ]
 
 
+def age_label(age: int | None) -> str | None:
+    """Ages over 89 count as identifying under HIPAA, so they are grouped."""
+    if age is None:
+        return None
+    return "90 or older" if age >= 90 else str(age)
+
+
 def scrub(text: str) -> tuple[str, list[str]]:
     """Return (cleaned text, list of the kinds of details that were removed)."""
     removed: list[str] = []

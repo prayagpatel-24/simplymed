@@ -1,11 +1,13 @@
 import { useState } from 'react'
+import PageHeader from './PageHeader.jsx'
 import TextSizeControl from './TextSizeControl.jsx'
 import { useCareStore } from '../store.jsx'
+import { href } from '../useRoute.js'
 import { usePersistentState } from '../usePersistentState.js'
 import { DEFAULTS_KEY, DEFAULT_OPTIONS, LANGUAGES } from '../settings.js'
 
 export default function SettingsPage({ textScale, onTextScaleChange }) {
-  const { medicines, events, clearAll } = useCareStore()
+  const { signedIn, medicines, events, clearAll } = useCareStore()
   const [defaults, setDefaults] = usePersistentState(DEFAULTS_KEY, DEFAULT_OPTIONS)
   const [cleared, setCleared] = useState(false)
 
@@ -17,42 +19,25 @@ export default function SettingsPage({ textScale, onTextScaleChange }) {
 
   return (
     <div className="page">
-      <header className="page-header">
-        <h1>Settings</h1>
-      </header>
+      <PageHeader path="/settings" />
 
       <section className="card" aria-labelledby="h-display">
         <h2 id="h-display">Reading</h2>
         <TextSizeControl value={textScale} onChange={onTextScaleChange} />
-        <p className="hint">The text size is remembered on this device.</p>
+        <p className="hint">
+          The words get bigger on every page.{' '}
+          {signedIn ? 'Your choice is saved to your account.' : 'Your choice is remembered on this device.'}
+        </p>
+        <p className="sample-text" aria-hidden="true">
+          Example: Take 1 tablet 2 times a day with food.
+        </p>
       </section>
 
       <section className="card" aria-labelledby="h-defaults">
-        <h2 id="h-defaults">When I simplify instructions</h2>
-        <fieldset>
-          <legend className="field-label">How simple should it be?</legend>
-          <label className="radio">
-            <input
-              type="radio"
-              name="default-level"
-              checked={defaults.readingLevel === 'very_simple'}
-              onChange={() => setDefaults({ ...defaults, readingLevel: 'very_simple' })}
-            />
-            Very simple
-          </label>
-          <label className="radio">
-            <input
-              type="radio"
-              name="default-level"
-              checked={defaults.readingLevel === 'simple'}
-              onChange={() => setDefaults({ ...defaults, readingLevel: 'simple' })}
-            />
-            Simple
-          </label>
-        </fieldset>
+        <h2 id="h-defaults">Language</h2>
         <div className="field-row wide">
           <label htmlFor="default-language" className="field-label">
-            Language
+            Write my care plans in
           </label>
           <select
             id="default-language"
@@ -66,15 +51,22 @@ export default function SettingsPage({ textScale, onTextScaleChange }) {
             ))}
           </select>
         </div>
-        <p className="hint">You can still change these each time you simplify.</p>
+        <p className="hint">You can still change this each time you simplify.</p>
       </section>
 
       <section className="card" aria-labelledby="h-data">
         <h2 id="h-data">My saved information</h2>
-        <p>
-          Your medicines and calendar are kept only in this browser tab. They are never sent to
-          the AI or saved on a server, and they are deleted when you close this tab.
-        </p>
+        {signedIn ? (
+          <p>
+            Your medicines and calendar are saved to your account, so they are here every time you sign
+            in. The full instructions you paste are not saved, and the AI does not keep anything.
+          </p>
+        ) : (
+          <p>
+            You are not signed in, so your medicines and calendar are kept only until you close this tab.{' '}
+            <a href={href('/account')}>Sign in or create an account</a> to keep them.
+          </p>
+        )}
         <p>
           Right now you have {medicines.length} {medicines.length === 1 ? 'medicine' : 'medicines'} and{' '}
           {events.length} calendar {events.length === 1 ? 'event' : 'events'} saved.

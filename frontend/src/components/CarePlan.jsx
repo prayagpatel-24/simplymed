@@ -26,6 +26,7 @@ export default function CarePlan({ result, onStartOver }) {
       <header className="plan-header">
         <p className="eyebrow">SimplyMed</p>
         <h1>My Care Plan</h1>
+        {result.age && <p className="plan-for">Written for: age {result.age}</p>}
       </header>
 
       <SafetyBanner safety={safety} />
@@ -54,7 +55,11 @@ export default function CarePlan({ result, onStartOver }) {
 
       <section className="card" aria-labelledby="h-summary">
         <h2 id="h-summary">The big picture</h2>
-        <p className="summary">{plan.summary}</p>
+        <ul className="summary">
+          {(Array.isArray(plan.summary) ? plan.summary : [plan.summary]).map((point, i) => (
+            <li key={i}>{point}</li>
+          ))}
+        </ul>
       </section>
 
       {plan.medications.length > 0 && (
@@ -132,7 +137,7 @@ export default function CarePlan({ result, onStartOver }) {
 
       <p className="meta no-print">
         Made by {result.provider === 'mock' ? 'demo mode (no AI connected)' : `${result.provider} (${result.model})`}.
-        The AI does not keep what you entered. SimplyMed keeps it only in this browser tab until you close it.
+        The AI does not keep what you entered. This care plan stays in this browser tab until you close it. Only what you choose to save goes to your account.
       </p>
     </article>
   )

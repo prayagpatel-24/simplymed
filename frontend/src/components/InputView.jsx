@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { simplify } from '../api.js'
 import { SAMPLES } from '../samples.js'
+import { useCareStore } from '../store.jsx'
+import PageHeader from './PageHeader.jsx'
 import { usePersistentState } from '../usePersistentState.js'
 import { DEFAULTS_KEY, DEFAULT_OPTIONS, LANGUAGES } from '../settings.js'
 
@@ -10,20 +12,24 @@ export default function InputView({ onResult }) {
   const [text, setText] = useState('')
   const [defaults] = usePersistentState(DEFAULTS_KEY, DEFAULT_OPTIONS)
   const [language, setLanguage] = useState(defaults.language)
-  const [readingLevel, setReadingLevel] = useState(defaults.readingLevel)
+  const { profile, updateProfile } = useCareStore()
+  const [age, setAge] = useState(profile.age ?? '')
   const [confirmed, setConfirmed] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const canSubmit = text.trim().length >= 10 && confirmed && !loading
+  const ageNumber = age === '' ? null : Number(age)
+  const ageValid = ageNumber === null || (Number.isInteger(ageNumber) && ageNumber >= 0 && ageNumber <= 120)
+  const canSubmit = text.trim().length >= 10 && confirmed && ageValid && !loading
 
   async function handleSubmit(e) {
     e.preventDefault()
     if (!canSubmit) return
     setLoading(true)
     setError('')
+    if (ageNumber !== (profile.age ?? null)) updateProfile({ age: ageNumber })
     try {
-      onResult(await simplify({ text, language, readingLevel }))
+      onResult(await simplify({ text, language, age: ageNumber }))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -33,14 +39,7 @@ export default function InputView({ onResult }) {
 
   return (
     <div className="input-view">
-      <section className="hero">
-        <p className="eyebrow">Plain-language medical instructions</p>
-        <h1>Understand your care instructions</h1>
-        <p className="lead">
-          Paste confusing discharge papers or a prescription label. SimplyMed turns them into a
-          clear care plan with your medicines, what to do, and when to get help.
-        </p>
-      </section>
+      <PageHeader path="/" />
 
       <div className="notice" role="note">
         <strong>Use made-up examples only.</strong> This is a student research prototype. Please do
@@ -76,27 +75,27 @@ export default function InputView({ onResult }) {
         </p>
 
         <div className="options">
-          <fieldset>
-            <legend className="field-label">How simple should it be?</legend>
-            <label className="radio">
-              <input
-                type="radio"
-                name="level"
-                checked={readingLevel === 'very_simple'}
-                onChange={() => setReadingLevel('very_simple')}
-              />
-              Very simple
+          <div>
+            <label htmlFor="age" className="field-label">
+              Age of the person taking the medicine (optional)
             </label>
-            <label className="radio">
-              <input
-                type="radio"
-                name="level"
-                checked={readingLevel === 'simple'}
-                onChange={() => setReadingLevel('simple')}
-              />
-              Simple
-            </label>
-          </fieldset>
+            <input
+              id="age"
+              type="number"
+              inputMode="numeric"
+              min="0"
+              max="120"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              aria-describedby="age-hint"
+              aria-invalid={!ageValid}
+            />
+            <p id="age-hint" className="hint">
+              {ageValid
+                ? 'Only the age, never a birthday. It helps us word things for a child or an adult and suggest questions to ask.'
+                : 'Please enter an age from 0 to 120, or leave it empty.'}
+            </p>
+          </div>
 
           <div>
             <label htmlFor="language" className="field-label">

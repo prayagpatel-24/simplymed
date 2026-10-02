@@ -1,0 +1,6 @@
+# Python packages for the Vercel function (api/index.py).
+# Keep in step with backend/requirements.txt (uvicorn is only needed for local runs).
+fastapi>=0.115
+httpx>=0.27
+pydantic>=2.10
+python-dotenv>=1.0
