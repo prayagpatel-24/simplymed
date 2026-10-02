@@ -42,6 +42,12 @@ create table if not exists public.feedback (
   created_at timestamptz not null default now()
 );
 
+-- Table access for the website. Projects created with "Automatically expose new tables" off
+-- have none by default. Signed-in people get full access to their own rows (RLS below
+-- limits it); visitors who are not signed in can only send feedback.
+grant select, insert, update, delete on public.profiles, public.medicines, public.events to authenticated;
+grant insert on public.feedback to anon, authenticated;
+
 alter table public.profiles enable row level security;
 alter table public.medicines enable row level security;
 alter table public.events enable row level security;
