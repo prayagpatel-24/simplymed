@@ -30,6 +30,7 @@
   --butter: #fbf0c9;    --butter-accent: #c79a1a;
   --rose: #f9dfe4;      --rose-accent: #c0506a;
   --sage: #e6ece2;      --sage-accent: #5e7d64;
+  --teal: #d7efec;      --teal-accent: #2f8a83;
 
   --danger: #9e1f17;
   --danger-bg: #fdeceb;
@@ -253,6 +254,7 @@ a {
 .tint-butter { --tab-bg: var(--butter); --tab-accent: var(--butter-accent); }
 .tint-rose { --tab-bg: var(--rose); --tab-accent: var(--rose-accent); }
 .tint-sage { --tab-bg: var(--sage); --tab-accent: var(--sage-accent); }
+.tint-teal { --tab-bg: var(--teal); --tab-accent: var(--teal-accent); }
 
 .account-status {
   margin: auto 0 0;
@@ -1419,6 +1421,85 @@ fieldset {
   padding: 0.7rem 1rem;
   font-size: 1.1em;
   margin: 0;
+}
+
+/* ---------- Admin ---------- */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.75rem;
+  margin: 0 0 0.5rem;
+}
+
+.stats div {
+  background: var(--teal);
+  border-radius: 12px;
+  padding: 0.7rem 1rem;
+}
+
+.stats dt {
+  font-size: 0.85em;
+  color: var(--muted);
+}
+
+.stats dd {
+  margin: 0;
+  font-size: 1.3em;
+  font-weight: 700;
+  color: var(--green-800);
+}
+
+.table-card > h2,
+.table-card > p,
+.table-card > .stats,
+.table-card > .button-row {
+  margin-left: 0.9rem;
+  margin-right: 0.9rem;
+}
+
+.table-card > h2 {
+  margin-top: 0.9rem;
+}
+
+.admin-table thead th {
+  background: var(--teal);
+  border-bottom-color: var(--teal-accent);
+}
+
+.comment-cell {
+  min-width: 14rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.admin-list {
+  list-style: none;
+  margin: 0 0 1.25rem;
+  padding: 0;
+}
+
+.admin-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.admin-list .badge {
+  margin-left: 0.5rem;
+}
+
+.admin-list .hint {
+  display: block;
+}
+
+.grant-form {
+  max-width: 32rem;
+  margin-bottom: 1rem;
 }
 
 /* ---------- Phones and narrow windows ---------- */

@@ -27,6 +27,9 @@ Hosted on Vercel (`vercel.json`, `api/index.py`); accounts and saved data in Sup
   doses, side effects or risks that are not in the original.
 - The Help chatbot (`backend/app/chat.py`) explains the app and the user's own care plan only.
   It never diagnoses or gives dosing advice, and it points to 911 for emergencies.
+- Admin access (reading feedback, adding admins) is enforced in the database by `is_admin()`,
+  `grant_admin()` and Row Level Security in `supabase/schema.sql`. The Admin tab is only a
+  convenience; never rely on hiding it. Do not put admin emails in the repo.
 - Reminder times are suggestions the user confirms; the app never decides a schedule.
 - Only synthetic example data in the repo.
 

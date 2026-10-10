@@ -87,6 +87,19 @@ export const ROUTES = [
       'Reset your password if you forgot it.',
     ],
   },
+  {
+    path: '/admin',
+    label: 'Admin',
+    icon: 'shield',
+    tint: 'teal',
+    adminOnly: true,
+    title: 'Admin',
+    overview: [
+      'Read the feedback people sent.',
+      'Download the feedback as a spreadsheet.',
+      'Make another person an admin with their email.',
+    ],
+  },
 ]
 
 const current = () => {

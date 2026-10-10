@@ -19,6 +19,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [ready, setReady] = useState(!supabase)
   const [recovering, setRecovering] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     if (!supabase) return
@@ -37,6 +38,20 @@ export function AuthProvider({ children }) {
     return () => data.subscription.unsubscribe()
   }, [])
 
+  // Ask the database whether this person is an admin. This only decides whether the Admin
+  // tab is shown; the database itself refuses admin data to everyone else.
+  useEffect(() => {
+    setIsAdmin(false)
+    if (!supabase || !user) return
+    let cancelled = false
+    supabase.rpc('is_admin').then(({ data }) => {
+      if (!cancelled) setIsAdmin(data === true)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id])
+
   async function call(promise) {
     const { error } = await promise
     if (error) throw new Error(friendly(error))
@@ -46,6 +61,7 @@ export function AuthProvider({ children }) {
     configured: Boolean(supabase),
     ready,
     user,
+    isAdmin,
     recovering,
     signIn: (email, password) => call(supabase.auth.signInWithPassword({ email, password })),
     signUp: async (email, password) => {

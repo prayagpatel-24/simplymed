@@ -46,6 +46,7 @@ safety check cannot verify them.
 - **Feedback**: ease-of-use rating, "did it make sense?", comments. Saved to Supabase.
 - **Settings**: text size (enlarges the words, not the layout), language, delete saved data.
 - **Account**: sign up, sign in, reset password, or continue without an account.
+- **Admin** (admins only): read and download feedback, add or remove admins by email.
 
 ## Run it on your computer (Windows / VS Code)
 
@@ -105,7 +106,25 @@ testers this too.
 5. Optional for testing: **Authentication -> Providers -> Email**, turn off **Confirm email**
    so testers can sign in right away.
 
-Feedback appears in **Table Editor -> feedback**, where you can export it to CSV.
+### Admins
+
+Admins get an extra **Admin** tab: all feedback (with a CSV download) and a box to make
+another person an admin by email. The database enforces this, not the website.
+
+Make the first admin by hand, once. That person must already have signed up in the app.
+In **SQL Editor**, run this with their email:
+
+```sql
+insert into public.admins (user_id, email)
+select id, lower(email) from auth.users where lower(email) = lower('you@example.com')
+on conflict (user_id) do nothing;
+```
+
+It should say "1 row". "0 rows" means no account uses that email yet. After that, admins add
+(and remove) other admins from the Admin tab. Keep **Confirm email** turned on once real
+testers are admins, so nobody can sign up with an email they do not own.
+
+Feedback also appears in **Table Editor -> feedback**, where you can export it to CSV.
 Free projects pause after about a week without use; open the dashboard and resume it.
 
 ## Deploy (free) on Vercel

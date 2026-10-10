@@ -7,6 +7,7 @@ import HelpPage from './components/HelpPage.jsx'
 import FeedbackPage from './components/FeedbackPage.jsx'
 import SettingsPage from './components/SettingsPage.jsx'
 import AccountPage from './components/AccountPage.jsx'
+import AdminPage from './components/AdminPage.jsx'
 import Icon from './components/Icon.jsx'
 import { AuthProvider, useAuth } from './auth.jsx'
 import { CareStoreProvider, useCareStore } from './store.jsx'
@@ -25,7 +26,7 @@ export default function App() {
 
 function Shell() {
   const route = useRoute()
-  const { user } = useAuth()
+  const { user, isAdmin } = useAuth()
   const { profile, updateProfile, syncError, imported, dismissImported } = useCareStore()
   const [result, setResult] = useSessionState('simplymed-result', null)
   const [logoFailed, setLogoFailed] = useState(false)
@@ -75,7 +76,7 @@ function Shell() {
           </a>
           <nav aria-label="Main">
             <ul className="tabs">
-              {ROUTES.map((r) => (
+              {ROUTES.filter((r) => !r.adminOnly || isAdmin).map((r) => (
                 <li key={r.path}>
                   <a
                     className={`tab tint-${r.tint}`}
@@ -126,6 +127,7 @@ function Shell() {
             {route === '/feedback' && <FeedbackPage />}
             {route === '/settings' && <SettingsPage textScale={textScale} onTextScaleChange={changeTextScale} />}
             {route === '/account' && <AccountPage />}
+            {route === '/admin' && <AdminPage />}
             {route === '/' &&
               (result ? (
                 <CarePlan result={result} onStartOver={() => setResult(null)} />

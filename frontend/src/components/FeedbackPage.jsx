@@ -106,7 +106,7 @@ export default function FeedbackPage() {
               </label>
               <select id="fb-page" value={form.page} onChange={set('page')}>
                 <option>Whole app</option>
-                {ROUTES.filter((r) => r.path !== '/feedback').map((r) => (
+                {ROUTES.filter((r) => r.path !== '/feedback' && !r.adminOnly).map((r) => (
                   <option key={r.path}>{r.label}</option>
                 ))}
               </select>
