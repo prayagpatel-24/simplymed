@@ -7,6 +7,7 @@ user's own care plan mean. It is not a medical advisor. Nothing is logged or sav
 import json
 
 from .pii import scrub
+from .prompt import LANGUAGES
 from .providers import BaseProvider
 
 MAX_MESSAGES = 12
@@ -58,6 +59,9 @@ def build_messages(messages: list[dict], plan: dict | None) -> list[dict]:
     return recent
 
 
-async def answer(messages: list[dict], plan: dict | None, provider: BaseProvider) -> str:
-    reply = await provider.complete_text(CHAT_SYSTEM, build_messages(messages, plan))
+async def answer(messages: list[dict], plan: dict | None, provider: BaseProvider, language: str = "en") -> str:
+    system = CHAT_SYSTEM
+    if language != "en":
+        system += f"\n\nWrite your answer in {LANGUAGES.get(language, 'English')}. Keep medicine names, numbers and 911 exactly as written."
+    reply = await provider.complete_text(system, build_messages(messages, plan))
     return reply.strip()

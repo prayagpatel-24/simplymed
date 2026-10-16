@@ -21,7 +21,10 @@ Hosted on Vercel (`vercel.json`, `api/index.py`); accounts and saved data in Sup
   provider. The server keeps nothing. What the user chooses to save (My Medicines, including
   each medicine's original-words excerpt, Calendar, age, text size) goes to Supabase when signed in, protected by Row Level Security, or to the
   tab's sessionStorage as a guest (`frontend/src/store.jsx`). Feedback goes to Supabase.
-  No analytics or third-party trackers.
+  No analytics or third-party trackers. "Email my care plan" is a `mailto:` link that opens the
+  person's own email app; the server never sends or sees email. Keep it that way.
+- Medicines taken weekly or on some days (`every_day: false`, `days_of_week`) must never get daily
+  reminders. `safety.py` (check 8) and `takenEveryDay()` in `frontend/src/schedule.js` both guard this.
 - Age, never a birth date. Ages 90+ are sent as "90 or older". Age may only change wording
   (caregiver voice for under 18) and add questions to ask; the AI must not state age-specific
   doses, side effects or risks that are not in the original.
@@ -39,3 +42,10 @@ Large base text (18px) with a text-size control that enlarges text (font sizes i
 for accents only, never body text), semantic HTML with labeled controls, text-labeled
 buttons rather than icon-only ones (icons only beside a label), a simple linear layout, and
 urgent warnings at the top. AI answers are short bullet points at a 5th-grade level.
+
+## Languages
+
+UI text lives in `frontend/src/i18n/<code>.js` (English in `en.js`; missing keys fall back to it).
+Add a language in three places: a file there, `LANGUAGES` in `frontend/src/i18n/index.jsx`, and
+`LANGUAGES` in `backend/app/prompt.py`. Non-English text is a test version until a fluent reader
+checks it. Calendar, Help, Feedback, Account and Admin page bodies are still English-only.

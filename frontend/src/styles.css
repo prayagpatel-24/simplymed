@@ -1504,6 +1504,141 @@ fieldset {
 
 /* ---------- Phones and narrow windows ---------- */
 
+/* ---------- Language menu, "ready" message, email, reminder times ---------- */
+
+.sidebar-language {
+  padding: 0 0.25rem;
+}
+
+.sidebar-language select,
+.language-select select {
+  width: 100%;
+}
+
+.language-select .hint {
+  margin: 0.3rem 0 0;
+}
+
+.sample-picker,
+.email-row,
+.time-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.sample-picker select {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+.email-row input {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.time-row input {
+  flex: 1 1 7rem;
+  min-width: 0;
+}
+
+.rewrite-status {
+  margin: 1.25rem 0 0;
+}
+
+.rewrite-status p:last-child {
+  margin-bottom: 0;
+}
+
+.rewrite-status .btn {
+  margin-top: 0.5rem;
+}
+
+.ready-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  margin-top: 1.25rem;
+  padding: 1rem 1.2rem;
+  background: var(--ok-bg);
+  border: 2px solid var(--green-600);
+  border-radius: var(--radius);
+  color: var(--ink);
+}
+
+.ready-banner > div {
+  flex: 1 1 16rem;
+}
+
+.ready-banner p {
+  margin: 0;
+}
+
+.ready-title {
+  font-weight: 700;
+  font-size: 1.15em;
+  color: var(--ok);
+}
+
+.ready-icon {
+  font-size: 2em;
+  line-height: 1;
+}
+
+.ready-banner:focus {
+  outline: 3px solid var(--gold-500);
+  outline-offset: 3px;
+}
+
+.confetti {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.schedule-fields {
+  display: grid;
+  gap: 0.6rem;
+  justify-items: start;
+}
+
+.schedule-fields > .times,
+.weekday-picker {
+  width: 100%;
+}
+
+.weekday-picker {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.6rem 0.9rem 0.8rem;
+  margin: 0;
+}
+
+.weekday-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 0.25rem 1rem;
+}
+
+.field-problem {
+  color: var(--danger);
+  font-weight: 700;
+  margin: 0;
+}
+
+.reminder-summary .times-list {
+  margin-bottom: 0.25rem;
+}
+
+.reminder-summary .hint {
+  margin-bottom: 0.4rem;
+}
+
 @media (max-width: 56rem) {
   .app-shell {
     grid-template-columns: 1fr;

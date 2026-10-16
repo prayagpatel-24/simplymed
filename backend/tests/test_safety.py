@@ -96,3 +96,38 @@ def test_scrub_removes_personal_details():
         assert secret not in cleaned
     assert "81 mg" in cleaned
     assert set(removed) >= {"name", "date of birth", "phone number", "record number"}
+
+
+METHOTREXATE = "Methotrexate 2.5 mg: Take 4 tablets (10 mg total) by mouth once weekly on Tuesdays only."
+
+
+def test_weekly_medicine_marked_daily_is_flagged():
+    m = med(name="Methotrexate", strength="2.5 mg", dose="4 tablets (10 mg total)",
+            frequency="1 time a week, on Tuesdays only", original_text=METHOTREXATE)
+    report = check_plan(METHOTREXATE, plan(medications=[m]))
+    assert not report["passed"]
+    assert "not taken every day" in messages(report)
+
+
+def test_weekly_medicine_with_days_passes_in_any_language():
+    m = med(name="Methotrexate", strength="2.5 mg", dose="4 tablets (10 mg total)",
+            frequency="1 time a week, on Tuesdays only", days_of_week=["tue"], original_text=METHOTREXATE)
+    p = plan(medications=[m])
+    assert p.medications[0].every_day is False
+    assert p.medications[0].days_of_week == ["Tuesday"]
+    assert "not taken every day" not in messages(check_plan(METHOTREXATE, p))
+    assert "not taken every day" not in messages(check_plan(METHOTREXATE, p, language="es"))
+
+
+def test_dropped_weekday_is_flagged():
+    original = "Bactrim DS 1 tab PO MWF."
+    p = plan(medications=[med(name="Bactrim DS", dose="1 tablet", frequency="3 days a week",
+                              every_day=False, original_text=original)])
+    assert "days of the week" in messages(check_plan(original, p))
+
+
+def test_age_shorthand_is_not_removed_as_a_name():
+    text, removed = scrub("Pt: 78yo M - Dx: Post-MI. Meds:")
+    assert "Post-MI" in text and removed == []
+    text, removed = scrub("Pt: John Sample")
+    assert "John" not in text and removed == ["name"]

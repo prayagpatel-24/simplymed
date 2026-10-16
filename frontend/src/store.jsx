@@ -13,14 +13,31 @@ const CareStore = createContext(null)
 export const newId = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
 
 const MEDICINE_FIELDS = [
-  'name', 'strength', 'dose', 'route', 'frequency', 'as_needed',
-  'duration', 'purpose', 'special_instructions', 'missed_dose', 'original_text',
+  'name', 'strength', 'dose', 'route', 'frequency', 'as_needed', 'every_day', 'days_of_week',
+  'times_per_day', 'interval_hours', 'duration', 'duration_days', 'purpose', 'special_instructions',
+  'missed_dose', 'original_text',
 ]
 
 export const emptyMedicine = () => ({
-  name: '', strength: '', dose: '', route: '', frequency: '', as_needed: false,
-  duration: '', purpose: '', special_instructions: [], missed_dose: '', original_text: '',
+  name: '', strength: '', dose: '', route: '', frequency: '', as_needed: false, every_day: true,
+  days_of_week: [], times_per_day: null, interval_hours: null, duration: '', duration_days: null,
+  purpose: '', special_instructions: [], missed_dose: '', original_text: '',
 })
+
+// One reminder event per time of day; a schedule covers `days` days from `date`,
+// only on `weekdays` (0 = Monday) when the medicine is not taken every day.
+const doseEvents = (med, schedule) =>
+  schedule.times.map((time) => ({
+    id: newId(),
+    kind: 'dose',
+    title: `Take ${med.name}`,
+    date: schedule.date,
+    time,
+    repeatDays: schedule.days,
+    weekdays: schedule.weekdays ?? null,
+    medicineId: med.id,
+    notes: doseNotes(med),
+  }))
 
 // "1 tablet. 875 mg. 2 times a day. Take it with food." for reminder descriptions.
 export const doseNotes = (m) =>
@@ -106,8 +123,8 @@ export function CareStoreProvider({ children }) {
 
   /**
    * Save what the user confirmed on a care plan.
-   * medications: plan medicines. schedules: { [index]: { date, times: [], days } } for the ones
-   * the user chose reminders for. appointments: [{ title, date, notes }].
+   * medications: plan medicines. schedules: { [index]: { date, times: [], days, weekdays } } for
+   * the ones the user chose reminders for. appointments: [{ title, date, notes }].
    * Medicines already saved (same name and original words) are skipped with their reminders.
    */
   function saveFromPlan({ medications, schedules, appointments }) {
@@ -118,20 +135,7 @@ export function CareStoreProvider({ children }) {
       const med = { id: newId(), edited: false, addedAt: new Date().toISOString() }
       for (const f of MEDICINE_FIELDS) med[f] = m[f] ?? emptyMedicine()[f]
       addedMeds.push(med)
-      const schedule = schedules[i]
-      if (!schedule) return
-      for (const time of schedule.times) {
-        addedEvents.push({
-          id: newId(),
-          kind: 'dose',
-          title: `Take ${m.name}`,
-          date: schedule.date,
-          time,
-          repeatDays: schedule.days,
-          medicineId: med.id,
-          notes: doseNotes(m),
-        })
-      }
+      if (schedules[i]) addedEvents.push(...doseEvents(med, schedules[i]))
     })
     for (const a of appointments) {
       const duplicate = events.some((e) => e.kind === 'appointment' && e.title === a.title && e.date === a.date)
@@ -175,6 +179,17 @@ export function CareStoreProvider({ children }) {
     setEvents((all) => all.filter((e) => e.medicineId !== id))
     remote((db) => db.from('medicines').delete().eq('id', id))
     if (linked.length) remote((db) => db.from('events').delete().in('id', linked))
+  }
+
+  /** Replace a medicine's dose reminders with a new schedule, or remove them all (null). */
+  function setMedicineSchedule(medicineId, schedule) {
+    const med = medicines.find((m) => m.id === medicineId)
+    if (!med) return
+    const old = events.filter((e) => e.kind === 'dose' && e.medicineId === medicineId).map((e) => e.id)
+    const fresh = schedule ? doseEvents(med, schedule) : []
+    setEvents((all) => [...all.filter((e) => !old.includes(e.id)), ...fresh])
+    if (old.length) remote((db) => db.from('events').delete().in('id', old))
+    if (fresh.length) remote((db) => db.from('events').insert(toRows(fresh)))
   }
 
   function addEvent(e) {
@@ -228,6 +243,7 @@ export function CareStoreProvider({ children }) {
     addMedicine,
     updateMedicine,
     removeMedicine,
+    setMedicineSchedule,
     addEvent,
     updateEvent,
     removeEvent,

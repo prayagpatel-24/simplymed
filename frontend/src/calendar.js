@@ -2,6 +2,7 @@
 // times are "HH:MM" or null (all day).
 
 import { toLocalDate } from './ics.js'
+import { getLocale } from './i18n/index.jsx'
 
 const pad = (n) => String(n).padStart(2, '0')
 
@@ -29,13 +30,16 @@ export function startOfWeek(key) {
 /**
  * Turn saved events into a list of days, each with the occurrences that fall on it.
  * An event with repeatDays shows on its start date and every day after, repeatDays days in total.
+ * An event with weekdays (0 = Monday ... 6 = Sunday) shows only on those days of the week.
  */
 export function expandEvents(events, fromKey, days) {
   return Array.from({ length: days }, (_, i) => {
     const key = addDays(fromKey, i)
+    const weekday = (toLocalDate(key).getDay() + 6) % 7
     const items = events
       .filter((e) => {
         const offset = daysBetween(e.date, key)
+        if (e.weekdays?.length && !e.weekdays.includes(weekday)) return false
         return offset >= 0 && offset < (e.repeatDays ? Number(e.repeatDays) : 1)
       })
       .sort((a, b) => (a.time ?? '').localeCompare(b.time ?? ''))
@@ -45,7 +49,7 @@ export function expandEvents(events, fromKey, days) {
 
 export function dayHeading(key) {
   const today = todayKey()
-  const date = toLocalDate(key).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
+  const date = toLocalDate(key).toLocaleDateString(getLocale(), { weekday: 'long', month: 'long', day: 'numeric' })
   if (key === today) return `Today, ${date}`
   if (key === addDays(today, 1)) return `Tomorrow, ${date}`
   return date
@@ -53,7 +57,7 @@ export function dayHeading(key) {
 
 export function formatTime(time) {
   if (!time) return 'Any time'
-  return toLocalDate('2000-01-01', time).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+  return toLocalDate('2000-01-01', time).toLocaleTimeString(getLocale(), { hour: 'numeric', minute: '2-digit' })
 }
 
 export function startOfMonth(key) {
@@ -78,6 +82,6 @@ export function monthGrid(key) {
 }
 
 export const monthLabel = (key) =>
-  toLocalDate(key).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+  toLocalDate(key).toLocaleDateString(getLocale(), { month: 'long', year: 'numeric' })
 
 export const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']

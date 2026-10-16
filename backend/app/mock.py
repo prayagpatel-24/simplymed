@@ -98,7 +98,7 @@ def build_mock_response(user_message: str) -> str:
     match = re.search(r"<original>\n?(.*?)\n?</original>", user_message, re.S)
     original = match.group(1) if match else user_message
 
-    if "amoxicillin-clavulanate" in original.lower():
+    if "community-acquired pneumonia" in original.lower():
         return json.dumps(DEMO_PLAN)
 
     sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+|\n+", original) if s.strip()]

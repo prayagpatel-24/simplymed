@@ -4,6 +4,8 @@ import {
   startOfMonth, startOfWeek, todayKey,
 } from '../calendar.js'
 import { buildIcs, downloadFile, toLocalDate } from '../ics.js'
+import { getLocale } from '../i18n/index.jsx'
+import { firstMatchingDate, weekdayName } from '../schedule.js'
 import { useCareStore } from '../store.jsx'
 import { href } from '../useRoute.js'
 import { usePersistentState } from '../usePersistentState.js'
@@ -11,7 +13,7 @@ import PageHeader from './PageHeader.jsx'
 
 const blankEvent = (date) => ({ kind: 'other', title: '', date, time: '', repeatDays: '', notes: '', medicineId: null })
 
-const longDate = (key, options) => toLocalDate(key).toLocaleDateString(undefined, options)
+const longDate = (key, options) => toLocalDate(key).toLocaleDateString(getLocale(), options)
 
 const countLabel = (n) => (n === 0 ? 'nothing planned' : `${n} ${n === 1 ? 'item' : 'items'}`)
 
@@ -57,7 +59,13 @@ export default function CalendarPage() {
     const appointments = []
     for (const e of events) {
       if (e.time) {
-        doses.push({ title: e.title, description: e.notes, start: toLocalDate(e.date, e.time), days: Math.max(1, Number(e.repeatDays) || 1) })
+        doses.push({
+          title: e.title,
+          description: e.notes,
+          start: toLocalDate(firstMatchingDate(e.date, e.weekdays), e.time),
+          days: Math.max(1, Number(e.repeatDays) || 1),
+          weekdays: e.weekdays,
+        })
       } else {
         appointments.push({ title: e.title, description: e.notes, date: toLocalDate(e.date) })
       }
@@ -176,9 +184,9 @@ export default function CalendarPage() {
               </caption>
               <thead>
                 <tr>
-                  {WEEKDAYS.map((d) => (
-                    <th key={d} scope="col" abbr={d}>
-                      {d.slice(0, 3)}
+                  {WEEKDAYS.map((d, i) => (
+                    <th key={d} scope="col" abbr={weekdayName(i, getLocale())}>
+                      {weekdayName(i, getLocale(), 'short')}
                     </th>
                   ))}
                 </tr>
@@ -286,10 +294,18 @@ function EventForm({ initial, title, onSave, onCancel }) {
           <input id="event-time" type="time" value={form.time} onChange={set('time')} />
         </div>
         <div className="form-field">
-          <label htmlFor="event-repeat" className="field-label">Repeat every day for how many days?</label>
+          <label htmlFor="event-repeat" className="field-label">
+            {form.weekdays?.length ? 'Repeat for how many days in total?' : 'Repeat every day for how many days?'}
+          </label>
           <input id="event-repeat" type="number" min="1" max="365" value={form.repeatDays} onChange={set('repeatDays')} placeholder="1" />
         </div>
       </div>
+      {form.weekdays?.length > 0 && (
+        <p className="hint">
+          Only on {form.weekdays.map((d) => weekdayName(d, getLocale())).join(', ')}. To change the days, use
+          "Change times" on the My Medicines page.
+        </p>
+      )}
       <div className="form-field">
         <label htmlFor="event-notes" className="field-label">Notes</label>
         <textarea id="event-notes" rows={2} value={form.notes} onChange={set('notes')} />

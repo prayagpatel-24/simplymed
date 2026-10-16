@@ -31,4 +31,4 @@ async function postJson(path, body) {
 export const simplify = ({ text, language, age }) => postJson('/api/simplify', { text, language, age })
 
 /** messages: [{ role: 'user' | 'assistant', content }]. plan: the current care plan, or null. */
-export const askHelper = ({ messages, plan }) => postJson('/api/chat', { messages, plan })
+export const askHelper = ({ messages, plan, language }) => postJson('/api/chat', { messages, plan, language })

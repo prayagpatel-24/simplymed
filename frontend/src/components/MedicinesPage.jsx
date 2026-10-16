@@ -1,43 +1,62 @@
 import { Fragment, useState } from 'react'
 import Original from './Original.jsx'
 import PageHeader from './PageHeader.jsx'
+import ScheduleFields from './ScheduleFields.jsx'
+import { formatTime, todayKey } from '../calendar.js'
+import { toLocalDate } from '../ics.js'
+import { useI18n } from '../i18n/index.jsx'
+import {
+  choiceProblem, namedWeekdays, scheduleFromEvents, suggestedTimes, takenEveryDay, toSchedule, weekdayName,
+} from '../schedule.js'
 import { emptyMedicine, useCareStore } from '../store.jsx'
 import { href } from '../useRoute.js'
 
 const TEXT_FIELDS = [
-  ['name', 'Medicine name'],
-  ['strength', 'Strength (for example, 500 mg)'],
-  ['dose', 'How much'],
-  ['route', 'How to take it'],
-  ['frequency', 'How often'],
-  ['duration', 'For how long'],
-  ['purpose', "What it's for"],
+  ['name', 'form.name'],
+  ['strength', 'form.strength'],
+  ['dose', 'med.dose'],
+  ['route', 'med.route'],
+  ['frequency', 'med.frequency'],
+  ['duration', 'med.duration'],
+  ['purpose', 'med.purpose'],
 ]
 
 // Table columns. On phones each row turns into a stacked card using these labels.
 const COLUMNS = [
-  ['How much', (m) => [m.dose, m.strength].filter(Boolean).join(', ')],
-  ['How often', (m) => m.frequency],
-  ['For how long', (m) => m.duration],
-  ["What it's for", (m) => m.purpose],
+  ['med.dose', (m) => [m.dose, m.strength].filter(Boolean).join(', ')],
+  ['med.frequency', (m) => m.frequency],
+  ['med.duration', (m) => m.duration],
+  ['med.purpose', (m) => m.purpose],
 ]
 
 export default function MedicinesPage() {
-  const { medicines, loading, addMedicine, updateMedicine, removeMedicine } = useCareStore()
+  const { t } = useI18n()
+  const { medicines, events, loading, addMedicine, updateMedicine, removeMedicine, setMedicineSchedule } = useCareStore()
   const [editingId, setEditingId] = useState(null)
+  const [schedulingId, setSchedulingId] = useState(null)
   const [adding, setAdding] = useState(false)
   const [openOriginal, setOpenOriginal] = useState(null)
   const editing = medicines.find((m) => m.id === editingId)
+  const scheduling = medicines.find((m) => m.id === schedulingId)
 
   function handleRemove(med) {
-    if (window.confirm(`Remove ${med.name} and its calendar reminders?`)) removeMedicine(med.id)
+    if (window.confirm(t('meds.removeConfirm', { name: med.name }))) removeMedicine(med.id)
   }
 
-  function startEdit(id) {
+  function open(which, id) {
     setAdding(false)
-    setEditingId(id)
+    setEditingId(which === 'edit' ? id : null)
+    setSchedulingId(which === 'schedule' ? id : null)
     window.scrollTo({ top: 0 })
   }
+
+  const closeForms = () => {
+    setEditingId(null)
+    setSchedulingId(null)
+    setAdding(false)
+  }
+
+  const formOpen = Boolean(editing || adding || scheduling)
 
   return (
     <div className="page">
@@ -47,55 +66,63 @@ export default function MedicinesPage() {
         <MedicineForm
           key={editing?.id ?? 'new'}
           initial={editing ?? emptyMedicine()}
-          title={editing ? `Change ${editing.name}` : 'Add a medicine'}
+          title={editing ? t('form.change', { name: editing.name }) : t('form.add')}
           isNew={!editing}
           onSave={(med) => {
             if (editing) updateMedicine(editing.id, med)
             else addMedicine(med)
-            setEditingId(null)
-            setAdding(false)
+            closeForms()
           }}
-          onCancel={() => {
-            setEditingId(null)
-            setAdding(false)
+          onCancel={closeForms}
+        />
+      )}
+
+      {scheduling && (
+        <ScheduleForm
+          key={scheduling.id}
+          med={scheduling}
+          saved={scheduleFromEvents(events, scheduling.id)}
+          onSave={(schedule) => {
+            setMedicineSchedule(scheduling.id, schedule)
+            closeForms()
           }}
+          onCancel={closeForms}
         />
       )}
 
       {loading ? (
-        <p className="card" role="status">Loading your medicines...</p>
+        <p className="card" role="status">{t('meds.loading')}</p>
       ) : medicines.length === 0 ? (
         !adding && (
           <div className="card empty">
             <p>
-              <strong>No medicines yet.</strong> <a href={href('/')}>Simplify some instructions</a>, then
-              choose <strong>Save to My Medicines and Calendar</strong>. You can also add one by hand.
+              <strong>{t('meds.emptyStrong')}</strong> <a href={href('/')}>{t('meds.emptyLink')}</a>,{' '}
+              {t('meds.emptyRest')}
             </p>
           </div>
         )
       ) : (
         <div className="card table-card">
           <table className="med-table">
-            <caption>
-              {medicines.length} {medicines.length === 1 ? 'medicine' : 'medicines'}
-            </caption>
+            <caption>{t('meds.count', { n: medicines.length })}</caption>
             <thead>
               <tr>
-                <th scope="col">Medicine</th>
+                <th scope="col">{t('meds.colMedicine')}</th>
+                <th scope="col">{t('meds.colTimes')}</th>
                 {COLUMNS.map(([label]) => (
-                  <th key={label} scope="col">{label}</th>
+                  <th key={label} scope="col">{t(label)}</th>
                 ))}
-                <th scope="col">Notes</th>
+                <th scope="col">{t('meds.colNotes')}</th>
               </tr>
             </thead>
             <tbody>
               {medicines.map((med) => (
                 <Fragment key={med.id}>
                   <tr>
-                    <th scope="row" data-label="Medicine">
+                    <th scope="row" data-label={t('meds.colMedicine')}>
                       <span className="med-name">{med.name}</span>
-                      {med.as_needed && <span className="badge">Only when needed</span>}
-                      {med.edited && <span className="badge badge-plain">Edited by you</span>}
+                      {med.as_needed && <span className="badge">{t('med.asNeeded')}</span>}
+                      {med.edited && <span className="badge badge-plain">{t('med.edited')}</span>}
                       <div className="row-actions">
                         {med.original_text && (
                           <button
@@ -104,27 +131,35 @@ export default function MedicinesPage() {
                             aria-expanded={openOriginal === med.id}
                             onClick={() => setOpenOriginal(openOriginal === med.id ? null : med.id)}
                           >
-                            {openOriginal === med.id ? 'Hide original words' : 'Show original words'}
+                            {openOriginal === med.id ? t('meds.hideOriginal') : t('meds.showOriginal')}
                           </button>
                         )}
-                        <button type="button" className="btn btn-ghost btn-small" onClick={() => startEdit(med.id)}>
-                          Edit <span className="visually-hidden">{med.name}</span>
+                        <button type="button" className="btn btn-ghost btn-small" onClick={() => open('edit', med.id)}>
+                          {t('meds.edit')} <span className="visually-hidden">{med.name}</span>
                         </button>
                         <button
                           type="button"
                           className="btn btn-ghost btn-small btn-danger-outline"
                           onClick={() => handleRemove(med)}
                         >
-                          Remove <span className="visually-hidden">{med.name}</span>
+                          {t('meds.remove')} <span className="visually-hidden">{med.name}</span>
                         </button>
                       </div>
                     </th>
+                    <td data-label={t('meds.colTimes')}>
+                      <ReminderSummary
+                        med={med}
+                        schedule={scheduleFromEvents(events, med.id)}
+                        disabled={formOpen}
+                        onChange={() => open('schedule', med.id)}
+                      />
+                    </td>
                     {COLUMNS.map(([label, value]) => (
-                      <td key={label} data-label={label}>
-                        {value(med) || <span className="muted">Not stated</span>}
+                      <td key={label} data-label={t(label)}>
+                        {value(med) || <span className="muted">{t('meds.notStated')}</span>}
                       </td>
                     ))}
-                    <td data-label="Notes">
+                    <td data-label={t('meds.colNotes')}>
                       {med.special_instructions?.length > 0 ? (
                         <ul className="cell-list">
                           {med.special_instructions.map((s, i) => (
@@ -132,17 +167,17 @@ export default function MedicinesPage() {
                           ))}
                         </ul>
                       ) : (
-                        <span className="muted">None</span>
+                        <span className="muted">{t('meds.none')}</span>
                       )}
                       <p className="cell-missed">
-                        <strong>If you miss a dose:</strong> {med.missed_dose || 'Ask your pharmacist.'}
+                        <strong>{t('med.missed')}</strong> {med.missed_dose || t('med.askPharmacist')}
                       </p>
                     </td>
                   </tr>
                   {openOriginal === med.id && (
                     <tr className="original-row">
-                      <td colSpan={COLUMNS.length + 2}>
-                        <p className="field-label">Original words for {med.name}</p>
+                      <td colSpan={COLUMNS.length + 3}>
+                        <p className="field-label">{t('meds.originalFor', { name: med.name })}</p>
                         <blockquote className="original-quote">{med.original_text}</blockquote>
                       </td>
                     </tr>
@@ -154,14 +189,14 @@ export default function MedicinesPage() {
         </div>
       )}
 
-      {!adding && !editing && (
+      {!formOpen && (
         <div className="button-row">
           <button type="button" className="btn btn-primary" onClick={() => setAdding(true)}>
-            Add a medicine by hand
+            {t('meds.addByHand')}
           </button>
           {medicines.length > 0 && (
             <button type="button" className="btn btn-ghost" onClick={() => window.print()}>
-              Print my medicines
+              {t('meds.print')}
             </button>
           )}
         </div>
@@ -170,7 +205,99 @@ export default function MedicinesPage() {
   )
 }
 
+/** The saved reminder times for one medicine, with a button to choose or change them. */
+function ReminderSummary({ med, schedule, disabled, onChange }) {
+  const { t, locale } = useI18n()
+  if (med.as_needed) return <span className="muted">{t('meds.asNeededNoTimes')}</span>
+  const date = (key) => toLocalDate(key).toLocaleDateString(locale, { month: 'long', day: 'numeric' })
+
+  return (
+    <div className="reminder-summary">
+      {schedule ? (
+        <>
+          <ul className="cell-list times-list">
+            {schedule.times.map((time) => (
+              <li key={time}>
+                <strong>{formatTime(time)}</strong>
+              </li>
+            ))}
+          </ul>
+          <p className="hint">
+            {schedule.weekdays?.length
+              ? `${t('sched.onlyOn', { days: schedule.weekdays.map((d) => weekdayName(d, locale)).join(', ') })}. `
+              : ''}
+            {schedule.days > 1 ? t('meds.forDays', { n: schedule.days, date: date(schedule.date) }) : t('meds.onDay', { date: date(schedule.date) })}
+          </p>
+        </>
+      ) : (
+        <p className="muted">{t('meds.noReminders')}</p>
+      )}
+      <button type="button" className="btn btn-ghost btn-small" onClick={onChange} disabled={disabled}>
+        {schedule ? t('meds.changeTimes') : t('meds.setTimes')} <span className="visually-hidden">{med.name}</span>
+      </button>
+    </div>
+  )
+}
+
+/** Choose or change when a saved medicine's reminders go off. */
+function ScheduleForm({ med, saved, onSave, onCancel }) {
+  const { t } = useI18n()
+  const lockedNotDaily = !takenEveryDay(med)
+  const everyDay = saved ? !saved.weekdays?.length : !lockedNotDaily
+  const [date, setDate] = useState(saved?.date ?? todayKey())
+  const [choice, setChoice] = useState(() => ({
+    include: true,
+    times: saved?.times ?? suggestedTimes(med) ?? [''],
+    everyDay,
+    lockedNotDaily,
+    weekdays: saved?.weekdays ?? (everyDay ? [] : namedWeekdays(med)),
+    days: saved?.days ?? med.duration_days ?? (everyDay ? 7 : 28),
+    daysFromInstructions: Boolean(saved || med.duration_days),
+  }))
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    if (choiceProblem(choice) || !date) return
+    onSave(toSchedule(choice, date))
+  }
+
+  function handleClear() {
+    if (window.confirm(t('sched.clearConfirm', { name: med.name }))) onSave(null)
+  }
+
+  return (
+    <form className="card med-form" onSubmit={handleSubmit} aria-labelledby="schedule-title">
+      <h2 id="schedule-title">{t('sched.title', { name: med.name })}</h2>
+      <p>{t('sched.intro')}</p>
+      {med.frequency && <p className="note">{t('sched.instructionsSay', { text: med.frequency })}</p>}
+      <Original text={med.original_text} />
+
+      <div className="form-field">
+        <label htmlFor="schedule-date" className="field-label">{t('rem.firstDay')}</label>
+        <input id="schedule-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+      </div>
+
+      <ScheduleFields idPrefix={`med-${med.id}`} value={choice} onChange={setChoice} />
+
+      <div className="button-row">
+        <button type="submit" className="btn btn-primary" disabled={Boolean(choiceProblem(choice))}>
+          {t('sched.save')}
+        </button>
+        <button type="button" className="btn btn-ghost" onClick={onCancel}>
+          {t('common.cancel')}
+        </button>
+        {saved && (
+          <button type="button" className="btn btn-ghost btn-danger-outline" onClick={handleClear}>
+            {t('sched.clear')}
+          </button>
+        )}
+      </div>
+    </form>
+  )
+}
+
 function MedicineForm({ initial, title, isNew = false, onSave, onCancel }) {
+  const { t } = useI18n()
   const [form, setForm] = useState(() => ({
     ...initial,
     special: (initial.special_instructions ?? []).join('\n'),
@@ -194,7 +321,7 @@ function MedicineForm({ initial, title, isNew = false, onSave, onCancel }) {
       {TEXT_FIELDS.map(([field, label]) => (
         <div key={field} className="form-field">
           <label htmlFor={idFor(field)} className="field-label">
-            {label}
+            {t(label)}
           </label>
           <input
             id={idFor(field)}
@@ -211,11 +338,11 @@ function MedicineForm({ initial, title, isNew = false, onSave, onCancel }) {
           checked={form.as_needed}
           onChange={(e) => setForm((f) => ({ ...f, as_needed: e.target.checked }))}
         />
-        Only take it when needed
+        {t('form.asNeeded')}
       </label>
       <div className="form-field">
         <label htmlFor={idFor('special')} className="field-label">
-          Special instructions (one per line)
+          {t('form.special')}
         </label>
         <textarea id={idFor('special')} rows={3} value={form.special} onChange={set('special')} />
       </div>
@@ -223,14 +350,14 @@ function MedicineForm({ initial, title, isNew = false, onSave, onCancel }) {
       {isNew ? (
         <div className="form-field">
           <label htmlFor={idFor('original')} className="field-label">
-            Words from the label (optional)
+            {t('form.labelWords')}
           </label>
           <textarea id={idFor('original')} rows={3} value={form.original_text} onChange={set('original_text')} />
         </div>
       ) : (
         initial.original_text && (
           <div className="form-field">
-            <p className="field-label">Original words (these do not change)</p>
+            <p className="field-label">{t('form.originalFixed')}</p>
             <Original text={initial.original_text} />
           </div>
         )
@@ -238,10 +365,10 @@ function MedicineForm({ initial, title, isNew = false, onSave, onCancel }) {
 
       <div className="button-row">
         <button type="submit" className="btn btn-primary">
-          Save
+          {t('common.save')}
         </button>
         <button type="button" className="btn btn-ghost" onClick={onCancel}>
-          Cancel
+          {t('common.cancel')}
         </button>
       </div>
     </form>

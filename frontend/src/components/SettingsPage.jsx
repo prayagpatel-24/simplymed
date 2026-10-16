@@ -1,18 +1,17 @@
 import { useState } from 'react'
 import PageHeader from './PageHeader.jsx'
 import TextSizeControl from './TextSizeControl.jsx'
+import { LanguageSelect, useI18n } from '../i18n/index.jsx'
 import { useCareStore } from '../store.jsx'
 import { href } from '../useRoute.js'
-import { usePersistentState } from '../usePersistentState.js'
-import { DEFAULTS_KEY, DEFAULT_OPTIONS, LANGUAGES } from '../settings.js'
 
 export default function SettingsPage({ textScale, onTextScaleChange }) {
+  const { t } = useI18n()
   const { signedIn, medicines, events, clearAll } = useCareStore()
-  const [defaults, setDefaults] = usePersistentState(DEFAULTS_KEY, DEFAULT_OPTIONS)
   const [cleared, setCleared] = useState(false)
 
   function handleClear() {
-    if (!window.confirm('Delete all medicines and calendar events you saved? This cannot be undone.')) return
+    if (!window.confirm(t('settings.deleteConfirm'))) return
     clearAll()
     setCleared(true)
   }
@@ -22,66 +21,47 @@ export default function SettingsPage({ textScale, onTextScaleChange }) {
       <PageHeader path="/settings" />
 
       <section className="card" aria-labelledby="h-display">
-        <h2 id="h-display">Reading</h2>
+        <h2 id="h-display">{t('settings.reading')}</h2>
         <TextSizeControl value={textScale} onChange={onTextScaleChange} />
         <p className="hint">
-          The words get bigger on every page.{' '}
-          {signedIn ? 'Your choice is saved to your account.' : 'Your choice is remembered on this device.'}
+          {t('settings.textHint')} {signedIn ? t('settings.savedAccount') : t('settings.savedDevice')}
         </p>
         <p className="sample-text" aria-hidden="true">
-          Example: Take 1 tablet 2 times a day with food.
+          {t('settings.example')}
         </p>
       </section>
 
       <section className="card" aria-labelledby="h-defaults">
-        <h2 id="h-defaults">Language</h2>
+        <h2 id="h-defaults">{t('lang.label')}</h2>
         <div className="field-row wide">
-          <label htmlFor="default-language" className="field-label">
-            Write my care plans in
-          </label>
-          <select
-            id="default-language"
-            value={defaults.language}
-            onChange={(e) => setDefaults({ ...defaults, language: e.target.value })}
-          >
-            {LANGUAGES.map(([code, label]) => (
-              <option key={code} value={code}>
-                {label}
-              </option>
-            ))}
-          </select>
+          <LanguageSelect id="default-language" label={t('settings.languageLabel')} />
         </div>
-        <p className="hint">You can still change this each time you simplify.</p>
+        <p className="hint">{t('settings.languageHint')}</p>
+        <p className="hint">{t('lang.testNote')}</p>
       </section>
 
       <section className="card" aria-labelledby="h-data">
-        <h2 id="h-data">My saved information</h2>
+        <h2 id="h-data">{t('settings.data')}</h2>
         {signedIn ? (
-          <p>
-            Your medicines and calendar are saved to your account, so they are here every time you sign
-            in. The full instructions you paste are not saved, and the AI does not keep anything.
-          </p>
+          <p>{t('settings.dataAccount')}</p>
         ) : (
           <p>
-            You are not signed in, so your medicines and calendar are kept only until you close this tab.{' '}
-            <a href={href('/account')}>Sign in or create an account</a> to keep them.
+            {t('settings.dataGuest')} <a href={href('/account')}>{t('settings.signInLink')}</a>{' '}
+            {t('settings.dataGuestRest')}
           </p>
         )}
-        <p>
-          Right now you have {medicines.length} {medicines.length === 1 ? 'medicine' : 'medicines'} and{' '}
-          {events.length} calendar {events.length === 1 ? 'event' : 'events'} saved.
-        </p>
+        <p>{t('settings.counts', { meds: medicines.length, events: events.length })}</p>
         <button
           type="button"
           className="btn btn-danger"
           onClick={handleClear}
           disabled={medicines.length === 0 && events.length === 0}
         >
-          Delete my medicines and calendar
+          {t('settings.delete')}
         </button>
         {cleared && (
           <p className="note" role="status">
-            Deleted.
+            {t('settings.deleted')}
           </p>
         )}
       </section>

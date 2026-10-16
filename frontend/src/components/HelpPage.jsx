@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import Icon from './Icon.jsx'
 import PageHeader from './PageHeader.jsx'
 import { askHelper } from '../api.js'
+import { useI18n } from '../i18n/index.jsx'
 import { href } from '../useRoute.js'
 
 const HOW_TO = [
@@ -130,6 +131,7 @@ export default function HelpPage({ carePlan }) {
 }
 
 function Chat({ carePlan }) {
+  const { language } = useI18n()
   const [messages, setMessages] = useState([WELCOME])
   const [draft, setDraft] = useState('')
   const [includePlan, setIncludePlan] = useState(Boolean(carePlan))
@@ -155,6 +157,7 @@ function Chat({ carePlan }) {
         // The greeting is shown on screen only; the AI gets the real conversation.
         messages: next.filter((m) => m !== WELCOME).slice(-12),
         plan: includePlan ? carePlan : null,
+        language,
       })
       setMessages((all) => [...all, { role: 'assistant', content: reply }])
     } catch (err) {

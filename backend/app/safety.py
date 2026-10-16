@@ -77,7 +77,17 @@ KEYWORD_RULES = [
      r"finish|all of (?:it|the)|every dose|complete|until .* gone", "finish all the medicine"),
     (r"\brefills?\b", r"refill", "refill information"),
     (r"\bno (?:lifting|baths?|swimming)|\bavoid\b|do not\b", r"\bno\b|do not|don't|avoid|stay away|never", '"do not" / "avoid" instruction'),
+    (r"\bq?weekly\b|once a week|\bq\.?\s?(?:wk|week)\b", r"week", "once-a-week schedule"),
+    (r"\b(?:mondays?|tuesdays?|wednesdays?|thursdays?|fridays?|saturdays?|sundays?|mwf|sat/sun)\b",
+     r"monday|tuesday|wednesday|thursday|friday|saturday|sunday", "days of the week to take it"),
 ]
+
+# Words in a medicine's original text that mean it is NOT taken every day.
+NOT_DAILY_RE = re.compile(
+    r"\bq?weekly\b|once a week|\bq\.?\s?(?:wk|week)\b|every other day|\bqod\b|\bmwf\b|\bsat/sun\b"
+    r"|\b(?:mondays?|tuesdays?|wednesdays?|thursdays?|fridays?|saturdays?|sundays?)\b",
+    re.I,
+)
 KEYWORD_RULES = [(re.compile(o), re.compile(s), label) for o, s, label in KEYWORD_RULES]
 
 DATE_RE = re.compile(r"\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b")
@@ -195,6 +205,12 @@ def check_plan(original: str, plan: CarePlan, language: str = "en") -> dict:
         words = [w for w in re.findall(r"[a-z]{4,}", m.name.lower())]
         if words and not any(w in orig for w in words):
             add("high", "medicine", f'The medicine "{m.name}" does not appear in the original.')
+
+    # 8. A weekly or some-days medicine marked as daily would get daily reminders.
+    #    Checked in every language: it reads the original words, not the translation.
+    for m in plan.medications:
+        if m.every_day and NOT_DAILY_RE.search(m.original_text):
+            add("high", "timing", f'"{m.name}" is not taken every day in the original, but this version treats it as daily.')
 
     checked = ["numbers", "doses", "dates", "medicine names"]
     note = None

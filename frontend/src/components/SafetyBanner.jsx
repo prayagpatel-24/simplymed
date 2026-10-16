@@ -1,4 +1,7 @@
+import { useI18n } from '../i18n/index.jsx'
+
 export default function SafetyBanner({ safety }) {
+  const { t } = useI18n()
   if (!safety) return null
   const high = safety.issues.filter((i) => i.severity === 'high')
   const medium = safety.issues.filter((i) => i.severity !== 'high')
@@ -7,8 +10,7 @@ export default function SafetyBanner({ safety }) {
     return (
       <div className="banner banner-ok" role="status">
         <p>
-          <strong>✓ Automatic check passed.</strong> Every number, dose, and timing we could find in
-          the original is also in this version. Still compare it with your original instructions.
+          <strong>{t('safety.okStrong')}</strong> {t('safety.ok')}
         </p>
         {safety.note && <p className="hint">{safety.note}</p>}
       </div>
@@ -17,10 +19,9 @@ export default function SafetyBanner({ safety }) {
 
   return (
     <div className={`banner ${high.length ? 'banner-danger' : 'banner-caution'}`} role="alert">
-      <h2>{high.length ? 'Please double-check these details' : 'Please look over these details'}</h2>
+      <h2>{high.length ? t('safety.highTitle') : t('safety.mediumTitle')}</h2>
       <p>
-        Our automatic check found differences between your original instructions and this simpler
-        version. <strong>Trust the original</strong> and ask your pharmacist or doctor.
+        {t('safety.body')} <strong>{t('safety.trust')}</strong>
       </p>
       <ul>
         {[...high, ...medium].map((issue, i) => (

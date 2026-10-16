@@ -1,15 +1,18 @@
+import { useI18n } from '../i18n/index.jsx'
+
 const SIZES = [
-  { scale: 1, label: 'Normal' },
-  { scale: 1.2, label: 'Large' },
-  { scale: 1.4, label: 'Extra large' },
-  { scale: 1.6, label: 'Largest' },
+  { scale: 1, label: 'text.normal' },
+  { scale: 1.2, label: 'text.large' },
+  { scale: 1.4, label: 'text.xl' },
+  { scale: 1.6, label: 'text.xxl' },
 ]
 
 export default function TextSizeControl({ value, onChange }) {
+  const { t } = useI18n()
   return (
     <div className="text-size" role="group" aria-labelledby="text-size-label">
       <p id="text-size-label" className="field-label">
-        Text size
+        {t('text.size')}
       </p>
       <div className="text-size-buttons">
         {SIZES.map((s) => (
@@ -21,7 +24,7 @@ export default function TextSizeControl({ value, onChange }) {
             aria-pressed={value === s.scale}
             onClick={() => onChange(s.scale)}
           >
-            {s.label}
+            {t(s.label)}
           </button>
         ))}
       </div>

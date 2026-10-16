@@ -3,11 +3,20 @@
 When you change this file, rerun `python -m eval.run_eval` and compare results.
 """
 
+# Must match the language list in frontend/src/i18n/index.jsx.
 LANGUAGES = {
     "en": "English",
     "es": "Spanish",
     "zh": "Simplified Chinese",
     "vi": "Vietnamese",
+    "tl": "Tagalog (Filipino)",
+    "ar": "Arabic",
+    "fr": "French",
+    "ko": "Korean",
+    "ru": "Russian",
+    "pt": "Portuguese",
+    "hi": "Hindi",
+    "ht": "Haitian Creole",
 }
 
 READING_LEVEL = "Write at about a 5th-grade reading level."
@@ -21,9 +30,11 @@ OUTPUT_SHAPE = """{
       "dose": "how much to take each time, e.g. \\"1 tablet\\" or null",
       "route": "plain words, e.g. \\"by mouth\\" or null",
       "frequency": "e.g. \\"2 times a day\\" or \\"every 6 hours, only as needed\\" or null",
-      "times_per_day": "integer ONLY if the original gives a fixed number of doses per day (BID = 2, daily = 1), else null",
+      "times_per_day": "integer ONLY if the original gives a fixed number of doses per day it is taken (BID = 2, daily = 1), else null",
       "interval_hours": "integer ONLY if the original says every N hours, else null",
       "as_needed": "true if PRN / as needed, else false",
+      "every_day": "false if the original says to take it less often than every day (once a week, only on some days, every other day), else true",
+      "days_of_week": ["English day names ONLY if the original names the days, e.g. [\\"Tuesday\\"] or [\\"Saturday\\", \\"Sunday\\"], else an empty list"],
       "duration": "e.g. \\"for 10 days\\" or null",
       "duration_days": "integer number of days ONLY if stated, else null",
       "purpose": "what it is for ONLY if the original says so, else null",
@@ -54,7 +65,7 @@ You are NOT a doctor. You only reword and reorganize what is written.
 ABSOLUTE RULES
 1. Never add medical information that is not in the original: no new medicines, brand names, doses, times, durations, warnings, side effects, diagnoses, or advice. If something a patient would need is missing or unclear, add it to "unclear_items" and write a question for "questions_to_ask". Never guess.
 2. Never change or round a number, unit, dose, strength, frequency, duration, or date. Write numbers as digits, exactly as in the original. Keep units (mg, mL, mcg, units, puffs, tablets). You may explain a unit in parentheses, e.g. "875 mg (milligrams)".
-3. Frequencies must match the original: write "N times a day" or "every N hours". Never turn "every 6 hours" into "4 times a day", and never invent clock times.
+3. Frequencies must match the original: write "N times a day" or "every N hours". Never turn "every 6 hours" into "4 times a day", and never invent clock times. A medicine taken once a week or only on some days (for example "Tuesdays only" or "Mon/Wed/Fri") must say so plainly and name the days; never make it sound like it is taken every day.
 4. An "as needed" (PRN) medicine must say "only as needed" and what it is for. Never turn an as-needed medicine into a scheduled one.
 5. Keep every warning, "do not", maximum dose, allergy note, food/alcohol/driving rule, and emergency sign. Never soften urgency. If the original says to call 911 or go to the emergency room, say exactly that.
 6. Expand abbreviations into plain words (PO = by mouth, BID = 2 times a day, TID = 3 times a day, PRN = as needed, q6h = every 6 hours, SOB = shortness of breath, CP = chest pain, F/u = follow up, PCP = your regular doctor, CXR = chest X-ray, EtOH = alcohol, abx = antibiotics). If you are not sure what an abbreviation means, keep it and list it in "unclear_items".
@@ -67,7 +78,7 @@ ABSOLUTE RULES
 12. Put each piece of information in exactly one section. Medicines go in "medications", not in "steps".
 {age_rules}
 READING LEVEL: {reading_level}
-OUTPUT LANGUAGE: {language}. Keep medicine names exactly as written. Keep numbers as digits. Keep JSON keys in English.
+OUTPUT LANGUAGE: {language}. Keep medicine names exactly as written. Write numbers with the digits 0-9, as in the original. Keep JSON keys and "days_of_week" in English.
 
 Return ONLY one JSON object, with no other text, in this exact shape:
 {shape}"""

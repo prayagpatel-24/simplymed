@@ -64,3 +64,14 @@ def test_chat_endpoint_mock(monkeypatch):
     r = client.post("/api/chat", json={"messages": [{"role": "user", "content": "How do I save?"}]})
     assert r.status_code == 200
     assert r.json()["reply"].startswith("- ")
+
+
+def test_simplify_accepts_new_languages_and_rejects_unknown(monkeypatch):
+    use_mock(monkeypatch)
+    ok = client.post("/api/simplify", json={"text": "Take aspirin 81 mg daily.", "language": "ar"})
+    assert ok.status_code == 200 and ok.json()["language"] == "ar"
+    assert client.post("/api/simplify", json={"text": "Take aspirin 81 mg daily.", "language": "xx"}).status_code == 422
+
+
+def test_prompt_names_the_language():
+    assert "OUTPUT LANGUAGE: Haitian Creole" in build_system_prompt("ht")

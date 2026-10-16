@@ -1,10 +1,13 @@
+import { useI18n } from '../i18n/index.jsx'
+
 export default function Readability({ readability }) {
+  const { t } = useI18n()
   if (!readability) return null
   const { original, simplified } = readability
 
   return (
     <section className="card no-print" aria-labelledby="h-readability">
-      <h2 id="h-readability">Reading level (for researchers)</h2>
+      <h2 id="h-readability">{t('readability.title')}</h2>
       <table className="readability">
         <thead>
           <tr>

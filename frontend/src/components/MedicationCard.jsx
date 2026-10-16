@@ -1,28 +1,30 @@
 import Original from './Original.jsx'
+import { useI18n } from '../i18n/index.jsx'
 
 // `children` is for extra buttons (Edit / Remove) on the My Medicines page.
 export default function MedicationCard({ med, children }) {
+  const { t } = useI18n()
   const facts = [
-    ['Strength', med.strength],
-    ['How much', med.dose],
-    ['How to take it', med.route],
-    ['How often', med.frequency],
-    ['For how long', med.duration],
-    ["What it's for", med.purpose],
+    ['med.strength', med.strength],
+    ['med.dose', med.dose],
+    ['med.route', med.route],
+    ['med.frequency', med.frequency],
+    ['med.duration', med.duration],
+    ['med.purpose', med.purpose],
   ].filter(([, value]) => value)
 
   return (
     <article className="card med-card">
       <div className="med-title">
         <h3>{med.name}</h3>
-        {med.as_needed && <span className="badge">Only when needed</span>}
-        {med.edited && <span className="badge badge-plain">Edited by you</span>}
+        {med.as_needed && <span className="badge">{t('med.asNeeded')}</span>}
+        {med.edited && <span className="badge badge-plain">{t('med.edited')}</span>}
       </div>
 
       <dl className="med-facts">
         {facts.map(([label, value]) => (
           <div key={label} className="med-fact">
-            <dt>{label}</dt>
+            <dt>{t(label)}</dt>
             <dd>{value}</dd>
           </div>
         ))}
@@ -37,8 +39,8 @@ export default function MedicationCard({ med, children }) {
       )}
 
       <p className="missed-dose">
-        <strong>If you miss a dose: </strong>
-        {med.missed_dose || 'Ask your pharmacist.'}
+        <strong>{t('med.missed')} </strong>
+        {med.missed_dose || t('med.askPharmacist')}
       </p>
 
       <Original text={med.original_text} />

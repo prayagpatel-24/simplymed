@@ -32,8 +32,20 @@ export function toLocalDate(dateStr, timeStr = '00:00') {
   return new Date(y, m - 1, d, hh, mm)
 }
 
+const BYDAY = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU']
+
+// Daily for `days` days, or only on `weekdays` (0 = Monday) until the last of those days.
+// The start must already fall on one of the weekdays: calendar apps always count it.
+function repeatRule({ start, days, weekdays }) {
+  if (!weekdays?.length) return `RRULE:FREQ=DAILY;COUNT=${days}`
+  const last = new Date(start)
+  last.setDate(last.getDate() + days - 1)
+  last.setHours(23, 59, 59)
+  return `RRULE:FREQ=WEEKLY;BYDAY=${weekdays.map((d) => BYDAY[d]).join(',')};UNTIL=${localDateTime(last).slice(0, -2)}59`
+}
+
 /**
- * doses: [{ title, description, start: Date, days }]  -> repeats daily
+ * doses: [{ title, description, start: Date, days, weekdays? }]  -> repeats daily, or weekly on weekdays
  * appointments: [{ title, description, date: Date }]  -> all-day event
  */
 export function buildIcs({ doses = [], appointments = [] }) {
@@ -53,7 +65,7 @@ export function buildIcs({ doses = [], appointments = [] }) {
       `DTSTAMP:${stamp}`,
       `DTSTART:${localDateTime(dose.start)}`,
       'DURATION:PT15M',
-      `RRULE:FREQ=DAILY;COUNT=${dose.days}`,
+      repeatRule(dose),
       `SUMMARY:${escapeText(dose.title)}`,
       `DESCRIPTION:${escapeText(dose.description)}`,
       'BEGIN:VALARM',

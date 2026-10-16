@@ -8,16 +8,17 @@ Privacy: user text is never saved or logged. It is only sent to the AI provider.
 import logging
 import time
 from collections import defaultdict, deque
-from typing import Literal
+from typing import Annotated, Literal
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field
 
 from . import config
 from .chat import answer
 from .pipeline import PlanParseError, simplify
+from .prompt import LANGUAGES
 from .providers import ProviderError, get_provider
 
 logging.basicConfig(level=logging.INFO)
@@ -31,9 +32,18 @@ app.add_middleware(
 )
 
 
+def _known_language(code: str) -> str:
+    if code not in LANGUAGES:
+        raise ValueError(f"Unsupported language. Choose one of: {', '.join(LANGUAGES)}.")
+    return code
+
+
+Language = Annotated[str, AfterValidator(_known_language)]
+
+
 class SimplifyRequest(BaseModel):
     text: str = Field(min_length=10, max_length=config.MAX_INPUT_CHARS)
-    language: Literal["en", "es", "zh", "vi"] = "en"
+    language: Language = "en"
     # An age, never a birth date. Ages 90+ are grouped before they reach the AI.
     age: int | None = Field(default=None, ge=0, le=120)
 
@@ -46,6 +56,7 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     messages: list[ChatMessage] = Field(min_length=1, max_length=40)
     plan: dict | None = None
+    language: Language = "en"
 
 
 _recent: dict[str, deque] = defaultdict(deque)
@@ -95,7 +106,7 @@ async def chat_endpoint(req: ChatRequest, request: Request):
     except ProviderError as e:
         raise HTTPException(503, str(e))
     try:
-        reply = await answer([m.model_dump() for m in req.messages], req.plan, provider)
+        reply = await answer([m.model_dump() for m in req.messages], req.plan, provider, req.language)
     except ProviderError as e:
         raise HTTPException(502, str(e))
     return {"reply": reply}

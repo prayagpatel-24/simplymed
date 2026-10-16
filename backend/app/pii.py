@@ -8,7 +8,8 @@ import re
 
 # Order matters: the more specific patterns run first.
 PATTERNS: list[tuple[str, re.Pattern, str]] = [
-    ("name", re.compile(r"(?im)^(\s*(?:patient(?:\s+name)?|name|pt)\s*:\s*)([^\n]*?)(?=\s{2,}|\s+(?:DOB|MRN|Date of Birth)\b|$)"), r"\1[NAME REMOVED]"),
+    # A name never starts with a digit, so "Pt: 78yo M - Dx: ..." (age, not a name) is kept.
+    ("name", re.compile(r"(?im)^(\s*(?:patient(?:\s+name)?|name|pt)\s*:\s*)(?!\s*\d)([^\n]*?)(?=\s{2,}|\s+(?:DOB|MRN|Date of Birth)\b|$)"), r"\1[NAME REMOVED]"),
     ("date of birth", re.compile(r"(?i)\b(DOB|Date of Birth|D\.O\.B\.)\s*[:#]?\s*(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|[A-Za-z]{3,9}\.?\s+\d{1,2},?\s+\d{4})"), r"\1: [REMOVED]"),
     ("record number", re.compile(r"(?i)\b(MRN|Medical Record(?: Number| No\.?)?|Acct(?:ount)?(?: No\.?| Number)?|Rx\s?#)\s*[:#]?\s*[A-Z0-9\-]{4,}"), r"\1: [REMOVED]"),
     ("social security number", re.compile(r"\b\d{3}-\d{2}-\d{4}\b"), "[REMOVED]"),
